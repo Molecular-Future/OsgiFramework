@@ -22,7 +22,7 @@ public class PackMapsCheckHealth implements Runnable {
 	@Override
 	public void run() {
 		try {
-			log.debug("PackMapsCheckHealth:--START");
+//			log.debug("PackMapsCheckHealth:--START");
 			Enumeration<String> en = mss.getPackMaps().keys();
 			ArrayList<String> rmkeys = new ArrayList<>();
 			while (en.hasMoreElements()) {
@@ -53,7 +53,7 @@ public class PackMapsCheckHealth implements Runnable {
 		} catch (Exception e) {
 			log.debug("error In PacketMapCheck thread:", e);
 		} finally {
-			log.debug("PackMapsCheckHealth: -- END");
+//			log.debug("PackMapsCheckHealth: -- END");
 		}
 	}
 

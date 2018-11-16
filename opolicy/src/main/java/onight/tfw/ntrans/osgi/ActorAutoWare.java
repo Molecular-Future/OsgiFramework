@@ -14,12 +14,12 @@ import org.osgi.framework.ServiceReference;
 
 @iPojoBean
 @Slf4j
-public class ActorAutoWare {
+public class ActorAutoWare implements IPolicy{
 
 	BundleContext context;
 
 	public ActorAutoWare(BundleContext context) {
-		super();
+		System.out.println("ActorAutoWare::"+context);
 		this.context = context;
 	}
 

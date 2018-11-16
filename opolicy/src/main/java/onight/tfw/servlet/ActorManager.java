@@ -1,48 +1,40 @@
 package onight.tfw.servlet;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
 import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import lombok.extern.slf4j.Slf4j;
-import onight.osgi.annotation.iPojoBean;
-import onight.tfw.async.CompleteHandler;
-import onight.tfw.otransio.api.PacketHelper;
-import onight.tfw.otransio.api.PacketFilter;
-import onight.tfw.otransio.api.beans.FramePacket;
-import onight.tfw.outils.conf.PropHelper;
-import onight.tfw.proxy.IActor;
 
 import org.apache.felix.ipojo.annotations.Bind;
-import org.apache.felix.ipojo.annotations.Component;
 import org.apache.felix.ipojo.annotations.Unbind;
+import org.apache.felix.ipojo.annotations.Validate;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.http.HttpService;
 
-@Component(name = "actorman")
+import lombok.extern.slf4j.Slf4j;
+import onight.osgi.annotation.iPojoBean;
+import onight.tfw.ntrans.osgi.IPolicy;
+import onight.tfw.outils.conf.PropHelper;
+
 @iPojoBean
 @Slf4j
-public class ActorManager {
+public class ActorManager implements IPolicy{
 
 	BundleContext bundleContext;
 
 	PropHelper prop;
 
-	public ActorManager(BundleContext bundleContext) {
-		super();
+	public ActorManager(BundleContext context) {
+		System.out.println("ActorManager()");
+		bundleContext=context;
 		prop = new PropHelper(bundleContext);
-		this.bundleContext = bundleContext;
 	}
+	@Validate
+	public void start() {
+		System.out.println("ActorManager.startup");
 
+	}
 	private LinkedList<HttpService> services = new LinkedList<HttpService>();
 	private Map<String, Servlet> servlets = new HashMap<String, Servlet>();
 
@@ -60,131 +52,67 @@ public class ActorManager {
 		}
 		services.remove(http);
 	}
-
-	@WebServlet(asyncSupported = true)
-	public class AsyncServlet extends HttpServlet {
-		IActor factor;
-
-		public AsyncServlet(IActor factor) {
-			super();
-			this.factor = factor;
-		}
-
-		protected void doGet(HttpServletRequest req, final HttpServletResponse resp)
-				throws ServletException, IOException {
-			// FramePacket pack = PacketHelper.buildHeaderFromHttpGet(req);
-			// CompleteHandler handler = new CompleteHandler() {
-			// @Override
-			// public void onFinished(FramePacket packet) {
-			// try {
-			// postRouteListner(packet, null);
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// }
-			// }
-			// };
-			// if (preRouteListner(pack, handler)) {
-			// return;
-			// }
-			factor.doGet(req, resp);
-		}
-
-		@Override
-		protected void doPost(HttpServletRequest req, final HttpServletResponse resp)
-				throws ServletException, IOException {
-			// FramePacket pack = PacketHelper.buildHeaderFromHttpPost(req);
-			// CompleteHandler handler = new CompleteHandler() {
-			// @Override
-			// public void onFinished(FramePacket packet) {
-			// try {
-			// if (packet != null) {
-			// resp.getOutputStream().write(PacketHelper.toTransBytes(packet));
-			// }
-			// postRouteListner(packet, null);
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// }
-			// }
-			// };
-			// if (preRouteListner(pack, handler)) {
-			// return;
-			// }
-			factor.doPost(req, resp);
-
-		}
-
-		@Override
-		protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-			factor.doPut(req, resp);
-		}
-
-		@Override
-		protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-			factor.doDelete(req, resp);
-		}
-	}
-
-	@Bind(aggregate = true, optional = true)
-	public void bindActor(IActor actor) {
-		log.info("bindActor:" + actor);
-		if (actor == null)
-			return;
-		String rootpath = prop.get("ofw.actor.rootpath", "");
-		if (rootpath.endsWith("/")) {
-			rootpath = rootpath.substring(0, rootpath.length() - 1);
-		}
-		String[] ctxpaths = actor.getWebPaths();
-		if (ctxpaths != null) {
-			for (String ctxpath : ctxpaths) {
-				HttpServlet servlet = new AsyncServlet(actor);
-				for (String spath : ctxpath.split(",")) {
-					servlets.put(rootpath + spath, servlet);
-					for (HttpService s : services) {
-						try {
-							if (prop.get("org.zippo.servlet.default", "/bca/pbver.do").equals(spath)) {
-								try {
-									s.registerServlet("/", servlet, null, null);
-									s.registerServlet(rootpath, servlet, null, null);
-									s.registerServlet(rootpath + spath, servlet, null, null);
-								} catch (Exception e) {
-								}
-							}
-							else{
-								s.registerServlet(rootpath + spath, servlet, null, null);
-								log.info("register servlet:" + rootpath + spath);
-							}
-						} catch (Exception e) {
-							log.warn("Failed in register servlet:"+rootpath+spath, e);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	@Unbind(aggregate = true, optional = true)
-	public void unbindActor(IActor actor) {
-		log.debug("unbind actor" + actor);
-		if (actor == null)
-			return;
-		String[] ctxpaths = actor.getWebPaths();
-		String rootpath = prop.get("ofw.actor.rootpath", "");
-		if (rootpath.endsWith("/")) {
-			rootpath = rootpath.substring(0, rootpath.length() - 1);
-		}
-		if (ctxpaths != null) {
-			for (String ctxpath : ctxpaths) {
-				servlets.remove(rootpath + ctxpath);
-				for (HttpService s : services) {
-					try {
-						s.unregister(rootpath + ctxpath);
-					} catch (Exception e) {
-					}
-					log.info("unbind servlet :" + ctxpath);
-				}
-			}
-		}
-
-	}
+//
+//	@Bind(aggregate = true, optional = true)
+//	public void bindActor(IActor actor) {
+//		log.info("bindActor:" + actor);
+//		if (actor == null)
+//			return;
+//		String rootpath = prop.get("ofw.actor.rootpath", "");
+//		if (rootpath.endsWith("/")) {
+//			rootpath = rootpath.substring(0, rootpath.length() - 1);
+//		}
+//		String[] ctxpaths = actor.getWebPaths();
+//		if (ctxpaths != null) {
+//			for (String ctxpath : ctxpaths) {
+//				HttpServlet servlet = new AsyncServlet(actor);
+//				for (String spath : ctxpath.split(",")) {
+//					servlets.put(rootpath + spath, servlet);
+//					for (HttpService s : services) {
+//						try {
+//							if (prop.get("org.zippo.servlet.default", "/bca/pbver.do").equals(spath)) {
+//								try {
+//									s.registerServlet("/", servlet, null, null);
+//									s.registerServlet(rootpath, servlet, null, null);
+//									s.registerServlet(rootpath + spath, servlet, null, null);
+//								} catch (Exception e) {
+//								}
+//							} else {
+//								s.registerServlet(rootpath + spath, servlet, null, null);
+//								log.info("register servlet:" + rootpath + spath);
+//							}
+//						} catch (Exception e) {
+//							log.warn("Failed in register servlet:" + rootpath + spath, e);
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//	@Unbind(aggregate = true, optional = true)
+//	public void unbindActor(IActor actor) {
+//		log.debug("unbind actor" + actor);
+//		if (actor == null)
+//			return;
+//		String[] ctxpaths = actor.getWebPaths();
+//		String rootpath = prop.get("ofw.actor.rootpath", "");
+//		if (rootpath.endsWith("/")) {
+//			rootpath = rootpath.substring(0, rootpath.length() - 1);
+//		}
+//		if (ctxpaths != null) {
+//			for (String ctxpath : ctxpaths) {
+//				servlets.remove(rootpath + ctxpath);
+//				for (HttpService s : services) {
+//					try {
+//						s.unregister(rootpath + ctxpath);
+//					} catch (Exception e) {
+//					}
+//					log.info("unbind servlet :" + ctxpath);
+//				}
+//			}
+//		}
+//
+//	}
 
 }

@@ -10,7 +10,7 @@ dependencies {
 jar {
 	manifest{
 		//		attributes( 'Spring-Context': 'applicationContext-common.xml, applicationContext-beans.xml')
-		attributes( 'Import-Ignore':'onight.tfw.otransio.api,onight.tfw.ntrans.api')
+		attributes( 'Import-Ignore':'')
 		attributes( 'DynamicImport-Package': '*')
 		attributes( 'Import-Lib': 'lib')
 	}
