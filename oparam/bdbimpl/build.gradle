@@ -1,10 +1,10 @@
 
-version = '3.3.0'
+version = '4.0.0'
 project.group='org.fc.zippo.oparam'
 
 dependencies {
 	
-	includeInJar "com.sleepycat:je:5.0.73"
+	includeInJar "com.sleepycat:je:18.3.1"
 	
 }
 

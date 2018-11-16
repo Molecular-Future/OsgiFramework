@@ -10,6 +10,6 @@ dependencies {
 
 jar {
 	manifest{
-		attributes( 'Import-Ignore':'com.ning')
+		attributes( 'Import-Ignore':'org.asynchttpclient,io.netty.handler.codec.http.cookie')
 	}
 }
