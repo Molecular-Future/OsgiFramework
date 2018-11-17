@@ -4,7 +4,7 @@ version='4.0.0'
 //group = 'onight.osgi'
 
 //buildscript {
-//	repositories { maven { url "http://172.18.80.22:8081/nexus/content/groups/public/" } }
+//	repositories { maven { url "http://172.18.80.253:8081/nexus/content/groups/public/" } }
 //
 //	dependencies {
 //		classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
