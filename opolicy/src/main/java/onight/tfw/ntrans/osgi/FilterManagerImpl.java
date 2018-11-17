@@ -36,7 +36,6 @@ public class FilterManagerImpl implements FilterManager, ActorService {
 
 	public FilterManagerImpl(BundleContext btx) {
 		this.btx = btx;
-		System.out.println("FilterManagerImpl::"+btx);
 		helper = new PropHelper(btx);
 	}
 

@@ -19,7 +19,7 @@ public class ActorAutoWare implements IPolicy{
 	BundleContext context;
 
 	public ActorAutoWare(BundleContext context) {
-		System.out.println("ActorAutoWare::"+context);
+//		log.debug("ActorAutoWare::"+context);
 		this.context = context;
 	}
 
