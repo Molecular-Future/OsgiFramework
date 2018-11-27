@@ -3,5 +3,8 @@
 	<wb-module deploy-name="scheduler">
 		<wb-resource deploy-path="/" source-path="src/main/resources"/>
 		<wb-resource deploy-path="/" source-path="src/main/java"/>
+		<wb-resource deploy-path="/" source-path="build/generated/source/proto/main/java"/>
+		<wb-resource deploy-path="/" source-path="src/main/proto"/>
+		<wb-resource deploy-path="/" source-path="src/main/scala"/>
 	</wb-module>
 </project-modules>

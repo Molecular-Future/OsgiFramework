@@ -1,5 +1,7 @@
 #org.springsource.ide.eclipse.gradle.core.preferences.GradleProjectPreferences
-#Fri Nov 16 19:14:23 CST 2018
+#Fri Nov 23 20:30:25 CST 2018
 build.family.org.gradle.tooling.model.eclipse.HierarchicalEclipseProject=;oapi;oparam;oparam/bdbimpl;opetcd;opolicy;ordbimpl;ordbutils;otransio;redisimpl;rmqimpl;scheduler;senders;senders/httpimpl;sm;sm/sm-api;sm/sm-redisimpl;
+org.springsource.ide.eclipse.gradle.classname.enableSorting=false
+org.springsource.ide.eclipse.gradle.classpath.enableSorting=true
 org.springsource.ide.eclipse.gradle.linkedresources=
 org.springsource.ide.eclipse.gradle.rootprojectloc=
