@@ -180,7 +180,18 @@ public class SpringContextLoader {
 		}
 		// bundle://42.0:18/SpringContext-ordb-common.xml
 		String bundleid = SpringContextLoader.class.getResource("/SpringContext-ordb-common.xml").getHost();
-		loadContext = bundleContext.getBundle(Integer.parseInt(bundleid.split("\\.")[0])).getBundleContext();
+		
+		// MT Update ##########
+//		loadContext = bundleContext.getBundle(Integer.parseInt(bundleid.split("\\.")[0])).getBundleContext();
+		int bid;
+		try {
+			bid = Integer.parseInt(bundleid.split("\\.")[0]);
+		} catch (NumberFormatException e1) {
+			bid = Integer.parseInt(bundleid.split("_")[1].split("\\.")[0]);
+		}
+		loadContext = bundleContext.getBundle(bid).getBundleContext();
+		//  ##########
+		
 		// bundleContext.getBundle()
 		for (String config : newconfigs) {
 			if (configs.contains(config)) {
