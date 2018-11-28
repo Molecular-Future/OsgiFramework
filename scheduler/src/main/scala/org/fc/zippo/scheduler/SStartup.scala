@@ -9,6 +9,8 @@ import com.google.protobuf.Message
 import onight.oapi.scala.commons.SessionModules
 import onight.oapi.scala.traits.OLog
 import onight.osgi.annotation.NActorProvider
+import onight.tfw.otransio.api.beans.FramePacket
+import onight.tfw.async.CompleteHandler
 
 abstract class PMDDC[T <: Message] extends SessionModules[T] with OLog {
   override def getModule: String = PModule.DDC.name()
@@ -30,5 +32,11 @@ class SStartup extends PMDDC[Message] {
     DDCInstance.shutdown();
   }
 
+  def post(pack: FramePacket, pbo: Message, handler: CompleteHandler, sm: SessionModules[Message]): Unit = {
+    DDCInstance.post(pack, pbo, handler, sm);
+  }
+  def scheduleWithFixedDelaySecond(run: Runnable, initialDelay: Long, period: Long): Unit = {
+    DDCInstance.scheduleWithFixedDelaySecond(run, initialDelay, period);
+  }
 }
 
