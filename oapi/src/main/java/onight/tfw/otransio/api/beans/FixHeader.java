@@ -3,6 +3,7 @@ package onight.tfw.otransio.api.beans;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.felix.ipojo.util.Log;
 import org.codehaus.jackson.annotate.JsonIgnore;
 
 import lombok.Data;

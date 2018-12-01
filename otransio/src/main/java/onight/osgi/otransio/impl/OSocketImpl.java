@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -18,6 +17,8 @@ import org.apache.felix.ipojo.annotations.Invalidate;
 import org.apache.felix.ipojo.annotations.Provides;
 import org.apache.felix.ipojo.annotations.Unbind;
 import org.apache.felix.ipojo.annotations.Validate;
+import org.fc.zippo.dispatcher.ForkJoinDispatcher;
+import org.fc.zippo.dispatcher.IActorDispatcher;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.Grizzly;
 import org.glassfish.grizzly.attributes.Attribute;
@@ -29,9 +30,8 @@ import onight.osgi.otransio.ck.CKConnPool;
 import onight.osgi.otransio.ck.NewConnCheckHealth;
 import onight.osgi.otransio.exception.NoneServerException;
 import onight.osgi.otransio.exception.TransIOException;
-import onight.osgi.otransio.exception.UnAuthorizedConnectionException;
 import onight.osgi.otransio.nio.OServer;
-import onight.osgi.otransio.nio.PacketQueue;
+import onight.osgi.otransio.nio.PacketTuple;
 import onight.osgi.otransio.sm.MSessionSets;
 import onight.osgi.otransio.sm.OutgoingSessionManager;
 import onight.osgi.otransio.sm.RemoteModuleBean;
@@ -39,6 +39,7 @@ import onight.osgi.otransio.sm.RemoteModuleSession;
 import onight.tfw.async.CompleteHandler;
 import onight.tfw.mservice.NodeHelper;
 import onight.tfw.ntrans.api.ActorService;
+import onight.tfw.ntrans.api.annotation.ActorRequire;
 import onight.tfw.otransio.api.MessageException;
 import onight.tfw.otransio.api.PSenderService;
 import onight.tfw.otransio.api.PackHeader;
@@ -74,16 +75,25 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 
 	public static String DROP_CONN = "DROP**";
 
+	@ActorRequire(name = "zippo.ddc", scope = "global")
+	IActorDispatcher dispatcher = null;
+
+	public IActorDispatcher getDispatcher() {
+		return dispatcher;
+	}
+
+	public void setDispatcher(IActorDispatcher dispatcher) {
+		log.info("setDispatcher==" + dispatcher);
+		this.dispatcher = dispatcher;
+		localProcessor.dispatcher = dispatcher;
+	}
+
 	BundleContext context;
 
 	public OSocketImpl(BundleContext context) {
 		this.context = context;
 		params = new PropHelper(context);
-		mss = new MSessionSets(params);
-		osm = new OutgoingSessionManager(this, params, mss);
-		mss.setOsm(osm);
-		localProcessor.exec = mss.getReaderexec();
-		localProcessor.poolSize = params.get("org.zippo.otransio.maxrunnerbuffer", 1000);
+		mss = new MSessionSets(OSocketImpl.this,params);
 	}
 
 	@Getter
@@ -111,16 +121,19 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 
 	@Validate
 	public void start() {
-		server.startServer(this, params);
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					/**
-					 * 等2秒主要是为了等注册
-					 */
+					while (dispatcher == null) {
+						Thread.sleep(2000);
+					}
 					log.info("transio startup:");
-					Thread.sleep(2000);
+					osm = new OutgoingSessionManager(OSocketImpl.this, params, mss);
+					mss.setOsm(osm);
+					localProcessor.poolSize = params.get("org.zippo.otransio.maxrunnerbuffer", 1000);
+					server.startServer(OSocketImpl.this, params);
+
 				} catch (InterruptedException e) {
 				}
 				// 建立外联服务
@@ -216,23 +229,19 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 		if (pack.isResp() && pack.getExtHead().isExist(mss.getPackIDKey())) {
 			// 检查是否为响应包
 			String expackid = pack.getExtStrProp(mss.getPackIDKey());
-			CompleteHandler future_handler = mss.getPackMaps().remove(expackid);
-			if (future_handler != null) {
-				Object opackid = pack.getExtHead().remove(mss.getPackIDKey());
-				Object ofrom = pack.getExtHead().remove(OSocketImpl.PACK_FROM);
-				Object oto = pack.getExtHead().remove(OSocketImpl.PACK_TO);
-				// log.error("response from = " + ofrom + ",oto=" + oto +
-				// ",opackid=" + opackid + ",gcmd="
-				// + pack.getModuleAndCMD() + ",conn=" + conn + ",pack=" +
-				// pack);
-				future_handler.onFinished(pack);
+			PacketTuple pt = mss.getPackMaps().remove(expackid);
+			if (pt != null) {
+				pt.getHandler().onFinished(pack);
+				mss.getPackPool().retobj(pt);
 			} else {
 				Object opackid = pack.getExtHead().remove(mss.getPackIDKey());
 				if (pack.getBody() != null && pack.getBody().length > 0) {
-					log.error("unknow ack:" + opackid + ",gcmd=" + pack.getModuleAndCMD() + ",conn=" + conn + ",pack="
-							+ pack.getExtHead());
+					log.error("unknow ack:" + opackid + ",gcmd=" + pack.getModuleAndCMD() + ",conn=" + conn + ",kvs="
+							+ pack.getExtHead().getVkvs() + ",h=" + pack.getExtHead().getHiddenkvs() + ",timepost="
+							+ getPackTimeout(expackid));
 				} else {
-					log.error("unknow ack:" + opackid + ",gcmd=" + pack.getModuleAndCMD() + ",conn=" + conn);
+					log.error("unknow ack:" + opackid + ",gcmd=" + pack.getModuleAndCMD() + ",conn=" + conn
+							+ ",timepost=" + getPackTimeout(expackid));
 				}
 				// handler.onFinished(PacketHelper.toPBReturn(pack, new
 				// LoopPackBody(mss.getPackIDKey(), pack)));
@@ -248,7 +257,10 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 			ms = mss.byNodeName(destTO);
 			if (ms == null) {// not found
 				String uri = pack.getExtStrProp(PACK_URI);
-				synchronized (destTO.intern()) {
+				if (uri == null) {
+					uri = destTO;
+				}
+				synchronized (uri.intern()) {
 					ms = mss.byNodeName(destTO);
 					if (ms == null) {// second entry
 						if (StringUtils.isNotBlank(uri)) {
@@ -333,10 +345,6 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 		if (!StringUtils.equals(oldname, newname)) {
 			log.debug("renameSession:" + oldname + "==>" + newname);
 			mss.renameSession(oldname, newname);
-			// PacketQueue queue = queueBybcuid.remove(oldname);
-			// if (queue != null) {
-			// queueBybcuid.put(newname, queue);
-			// }
 		}
 	}
 
@@ -363,12 +371,25 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 	public void doSomething(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		resp.setCharacterEncoding("UTF-8");
 		resp.setHeader("Content-type", "application/json;charset=UTF-8");
-		resp.getWriter().write(mss.getJsonInfo());
+		if (req.getServletPath().endsWith("rhr") || req.getServletPath().endsWith("pbrhr.do")) {
+			resp.getWriter().write(mss.getSimpleJsonInfo());
+		} else {
+			resp.getWriter().write(mss.getJsonInfo());
+		}
 	}
 
 	@Override
 	public String[] getWebPaths() {
-		return new String[] { "/nio/stat" };
+		return new String[] { "/nio/stat", "/nio/rhr", "/nio/pbrhr", "/nio/pbrhr.do" };
+	}
+
+	public static String getPackTimeout(String key) {
+		String times[] = key.split("_");
+		if (times.length > 2) {
+			long startTime = Long.parseLong(times[times.length - 2]);
+			return "" + (System.currentTimeMillis() - startTime);
+		}
+		return "--not_time_pack--";
 	}
 
 }

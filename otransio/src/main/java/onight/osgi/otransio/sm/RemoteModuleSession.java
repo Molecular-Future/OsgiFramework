@@ -18,6 +18,7 @@ import onight.osgi.otransio.ck.CKConnPool;
 import onight.osgi.otransio.impl.NodeInfo;
 import onight.osgi.otransio.impl.OSocketImpl;
 import onight.osgi.otransio.nio.PacketQueue;
+import onight.osgi.otransio.nio.PacketTuple;
 import onight.tfw.async.CompleteHandler;
 import onight.tfw.otransio.api.MessageException;
 import onight.tfw.otransio.api.PacketHelper;
@@ -107,8 +108,10 @@ public class RemoteModuleSession extends PSession {
 		this.mss = mss;
 		this.nodeInfo = nodeInfo;
 		this.connsPool = ckpool;
-		writerQ = new PacketQueue(ckpool, mss.packet_buffer_size, mss.writerexec, mss.packPool, mss.writerPool,
-				mss.resendMap, mss.getResendBufferSize());
+		;
+		writerQ = new PacketQueue(ckpool, mss.packet_buffer_size,
+				mss.getOsocket().getDispatcher().getExecutorService("transio.remote.writer"), mss.packPool,
+				mss.writerPool, mss.resendMap, mss.getResendBufferSize());
 	}
 
 	public RemoteModuleSession addConnection(Connection<?> conn) {
@@ -148,7 +151,7 @@ public class RemoteModuleSession extends PSession {
 			if (to_pack != null) {
 				pack.getExtHead().append(OSocketImpl.PACK_TO + "_D", to_pack);
 			}
-			mss.packMaps.put(packid, handler);
+			mss.packMaps.put(packid, mss.getPackPool().borrowTuple(pack, handler, writerQ));
 			// log.error("sendSyncPack:packid=" + packid + ",maps.size=" +
 			// mss.packMaps.size());
 		} else {
