@@ -54,7 +54,9 @@ class ZippoDDC extends PMDDC[Message] with IActorDispatcher {
   def scheduleWithFixedDelaySecond(run: Runnable, initialDelay: Long, period: Long) = {
     DDCInstance.scheduleWithFixedDelaySecond(run, initialDelay, period)
   }
-
+  def scheduleWithFixedDelay(run: Runnable, initialDelay: Long, period: Long,tu:TimeUnit) = {
+    DDCInstance.scheduleWithFixedDelay(run, initialDelay, period,tu)
+  }
   def post(pack: FramePacket, handler: CompleteHandler, sm: PBActor[Message]) = {
     DDCInstance.post(pack, handler, sm)
   }
