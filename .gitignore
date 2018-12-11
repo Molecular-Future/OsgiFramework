@@ -15,6 +15,7 @@ zcs-jzsy-ops-new.iml
 ### Java template
 # Compiled class file
 *.class
+*.impl
 
 # Log file
 *.log
