@@ -1,5 +1,5 @@
 
-version = '4.0.0-mysql'
+version = '4.0.1-mysql'
 
 
 sourceSets {
@@ -34,9 +34,10 @@ dependencies {
 	//commons-lang3
 	// Mappers
 	includeInJar "commons-beanutils:commons-beanutils-core:1.8.3"
-	includeInJar "cglib:cglib-nodep:3.2.9"
+	includeInJar "cglib:cglib:3.2.10"
+	includeInJar "org.ow2.asm:asm:7.0"
 	
-	includeInJar files('libs/ojdbc6.jar','libs/mysql-connector-java-8.0.13.jar','libs/c3p0-0.9.5.2.jar','libs/mchange-commons-java-0.2.15.jar')
+	includeInJar files('libs/mysql-connector-java-8.0.13.jar','libs/c3p0-0.9.5.2.jar','libs/mchange-commons-java-0.2.15.jar')
 	includeInJar	'org.apache.poi:poi:4.0.0'
 	//	 testCompile 'junit:junit:4.12'
 }
