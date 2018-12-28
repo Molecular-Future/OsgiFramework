@@ -32,6 +32,15 @@ zcs-jzsy-ops-new.iml
 *.zip
 *.tar.gz
 *.rar
+/**/.classpath
+/**/.project
+/**/build
+/**/target
+/**/bin
+/**/.settings
+/**/.gradle
+/**/.cache*
+/**/.externalToolBuilders
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
