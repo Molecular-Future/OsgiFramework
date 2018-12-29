@@ -1,6 +1,5 @@
 package onight.tfw.ojpa.ordb.loader;
 
-import java.beans.PropertyVetoException;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -15,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.mapper.MapperFactoryBean;
 import org.osgi.framework.BundleContext;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -28,11 +26,10 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import com.mchange.v2.c3p0.ComboPooledDataSource;
+import com.zaxxer.hikari.HikariDataSource;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import onight.osgi.annotation.NActorProvider;
 import onight.tfw.ojpa.api.DomainDaoSupport;
 import onight.tfw.ojpa.api.annotations.Tab;
 import onight.tfw.ojpa.ordb.ExtendDaoSupper;
@@ -114,8 +111,6 @@ public class SpringContextLoader {
 			beanMappersByBundle.put(scope, beans);
 		}
 
-		org.mybatis.spring.SqlSessionFactoryBean bean;
-
 		MapperFactoryBean mfb = new MapperFactoryBean(mapper.getClass());
 		mfb.setSqlSessionFactory((SqlSessionFactory) appContext.getBean("sqlSessionFactory"));
 		mfb.setMapperInterface(mapper.getClass());
@@ -130,21 +125,21 @@ public class SpringContextLoader {
 	}
 
 	public void unregisterMapper(Object mapper, String scope) {
-
 		ConcurrentHashMap<String, Object> beans = beanMappersByBundle.get(scope);
 		if (beans == null) {
 			return;
 		}
+		
 		Object mfb = beans.remove(getMapperBeanName(mapper, scope));
 		if (mfb == null) {
 			log.debug("cannot unregister mapper: bean object not found:" + getMapperBeanName(mapper, scope));
 			return;
 		}
+		
 		ConfigurableApplicationContext configContext = (ConfigurableApplicationContext) appContext;
 		ConfigurableBeanFactory beanRegistry = configContext.getBeanFactory();
 		beanRegistry.destroyBean(scope + "." + StringUtils.uncapitalize(mapper.getClass().getName()), mfb);
 		log.info("Registry SQLMapper :" + mapper);
-
 	}
 
 	public String[] toBundleUrls(String[] paths) {
@@ -156,8 +151,8 @@ public class SpringContextLoader {
 			ret[i++] = url.toString();
 
 		}
+		
 		return ret;
-
 	}
 
 	BundleContext loadContext;
@@ -233,39 +228,34 @@ public class SpringContextLoader {
 				return super.getClassLoader();
 			}
 		};
-
-		//org.mybatis.spring.SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
-		log.debug("init spring mybatis ok");
-		ComboPooledDataSource ds = (ComboPooledDataSource) appContext.getBean("dataSource");
-		ds.setJdbcUrl(propHelper.get("ofw.ordb.url",
-				"jdbc:mysql://localhost:3306/msb?autoReconnect=true&amp;useUnicode=true&amp;characterEncoding=utf8"));
-		ds.setUser(propHelper.get("ofw.ordb.usr", "msbao"));
-		ds.setPassword(propHelper.get("ofw.ordb.pwd", "msbao"));
-		ds.setMaxPoolSize(propHelper.get("ofw.ordb.maxpool", 100));
-		ds.setMinPoolSize(propHelper.get("ofw.ordb.minpool", 10));
-		ds.setMaxIdleTime(propHelper.get("ofw.ordb.maxidletime", 1800));
-		ds.setMaxStatements(propHelper.get("ofw.ordb.maxstatements", 0));
-		ds.setMaxStatementsPerConnection(propHelper.get("ofw.ordb.maxstatementsperconn", 0));
-		ds.setPreferredTestQuery("SELECT 1");
-		ds.setTestConnectionOnCheckout(true);
-		ds.setIdleConnectionTestPeriod(propHelper.get("ofw.ordb.idletest", 60));
-		try {
-			ds.setDriverClass(propHelper.get("ofw.ordb.driver", "com.mysql.jdbc.Driver"));
-		} catch (PropertyVetoException e) {
-			log.error("Driver Error");
-			e.printStackTrace();
+		
+		if(log.isDebugEnabled()) {
+			log.debug("init spring mybatis ok");
 		}
+		//org.mybatis.spring.SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+		//C3PO => Hikari针对mysql连接池, @author lance 2018.12.30
+		HikariDataSource ds = (HikariDataSource) appContext.getBean("dataSource");
+		ds.setJdbcUrl(propHelper.get("ofw.ordb.url", "jdbc:mysql://localhost:3306/msb?autoReconnect=true&amp;useUnicode=true&amp;characterEncoding=utf8"));
+		ds.setUsername(propHelper.get("ofw.ordb.usr", "msbao"));
+		ds.setPassword(propHelper.get("ofw.ordb.pwd", "msbao"));
+		ds.setMaximumPoolSize(propHelper.get("ofw.ordb.maxpool", 100));
+		ds.setMinimumIdle(propHelper.get("ofw.ordb.minpool", 10));
+		ds.setConnectionTestQuery("SELECT 1");
+		//30000 (30 seconds)
+		ds.setConnectionTimeout(30000);
+		ds.setPoolName("CSC-ConnectionPool");
+		ds.setDriverClassName(propHelper.get("ofw.ordb.driver", "com.mysql.cj.jdbc.Driver"));
+		
+		ds.addDataSourceProperty("cachePrepStmts", "true");
+		ds.addDataSourceProperty("prepStmtCacheSize", "250");
+		ds.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+	
 		log.info("ORDBURL=" + ds.getJdbcUrl());
-
 		String names[] = appContext.getBeanDefinitionNames();
 		log.info("total beans:" + names.length + ",springcontext=" + appContext + "@" + this);
 
-		//for (String name : names) {
-			// log.debug("name::"+name);
-		//}
 		txManager = (PlatformTransactionManager) appContext.getBean("transactionManager");
 		log.info("txManager=" + txManager);
-
 	}
 
 	public void registerDaoBeans() {
@@ -302,7 +292,7 @@ public class SpringContextLoader {
 		if (appContext != null) {
 			((ConfigurableApplicationContext) appContext).close();
 		}
+		
 		log.info("退出完成：SpringContext");
 	}
-
 }
