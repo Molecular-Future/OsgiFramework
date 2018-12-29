@@ -13,6 +13,7 @@ buildscript {
 
 
 apply plugin: 'zippo'
+apply plugin: 'maven-publish'
 //apply plugin: 'eclipse-wtp'
 
 
@@ -45,6 +46,7 @@ subprojects {
 	
 
 	apply plugin: 'zippo'
+	apply plugin: 'maven-publish'
 
 
 	dependencies {
@@ -66,4 +68,25 @@ subprojects {
 	version = '4.0.0'
 
 	jar { manifest.attributes provider: 'org.fc.zippo' }
+
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+			}
+		}
+		def reporUrl = version.endsWith('SNAPSHOT') ?
+				obr_host_snapshot
+				: obr_host
+		println reporUrl
+		repositories {
+			maven {
+				url = reporUrl
+				credentials {
+					username obr_usr
+					password obr_pwd
+				}
+			}
+		}
+	}
 }
