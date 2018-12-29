@@ -8,14 +8,14 @@
                          http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
                          http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
                           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
-	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+	<!-- <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
 		destroy-method="close">
-		<!-- <property name="driverClass" value="com.mysql.jdbc.Driver" /> -->
- 		<!-- <property name="jdbcUrl" value="jdbc:mysql://172.30.12.44:3316/msb?autoReconnect=true&amp;useUnicode=true&amp;characterEncoding=utf8" /> -->
-<!-- 		<property name="user" value="msbao" />
-		<property name="password" value="msbao" /> 
- -->	
- 	</bean>
+		<property name="driverClass" value="com.mysql.jdbc.Driver" /> 
+ 		<property name="jdbcUrl" value="jdbc:mysql://172.30.12.44:3316/msb?autoReconnect=true&amp;useUnicode=true&amp;characterEncoding=utf8" /> 
+ 		<property name="user" value="msbao" />
+		<property name="password" value="msbao" /> 	
+ 	</bean> -->
+ 	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close"/>
 
 	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />

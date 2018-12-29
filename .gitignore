@@ -32,6 +32,7 @@ zcs-jzsy-ops-new.iml
 *.zip
 *.tar.gz
 *.rar
+.settings
 /**/.classpath
 /**/.project
 /**/build
