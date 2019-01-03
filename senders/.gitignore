@@ -154,8 +154,8 @@ $RECYCLE.BIN/
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # User-specific stuff:
-/**/.idea/
-/**/*.iml
+.idea/
+.idea/**
 # CMake
 cmake-build-debug/
 
@@ -168,7 +168,7 @@ cmake-build-debug/
 ## Plugin-specific files:
 
 # IntelliJ
-/**/out/
+out/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
@@ -185,11 +185,8 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 ### Gradle template
-/**/.gradle
-/**/build/
-
-### Maven
-/**/target/
+.gradle
+/build/
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -203,4 +200,5 @@ gradle-app.setting
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
 
+build/
 .cache-tests

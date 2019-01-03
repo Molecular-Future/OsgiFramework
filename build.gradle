@@ -3,7 +3,7 @@ buildscript {
 	repositories { maven { url "http://172.18.80.253:8081/nexus/content/groups/public/" } }
 
 	dependencies {
-		classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
+		classpath "onight.osgi:zpp-gradle_1.8:3.3.1"
 		if(project.name!='oapi_1.8'&&project.name!='oapi') {
 //			classpath ("org.fc.zippo:org.fc.zippo.oapi_1.8:4.0.0")
 		}
@@ -13,6 +13,7 @@ buildscript {
 
 
 apply plugin: 'zippo'
+apply plugin: 'maven-publish'
 //apply plugin: 'eclipse-wtp'
 
 
@@ -35,7 +36,7 @@ subprojects {
 		repositories { maven { url "http://172.18.80.253:8081/nexus/content/groups/public/" } }
 	
 		dependencies {
-			classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
+			classpath "onight.osgi:zpp-gradle_1.8:3.3.1"
 			if(project.name!='oapi_1.8'&&project.name!='oapi') {
 				classpath ("org.fc.zippo:org.fc.zippo.oapi:4.0.0")
 			}
@@ -45,6 +46,7 @@ subprojects {
 	
 
 	apply plugin: 'zippo'
+	apply plugin: 'maven-publish'
 
 
 	dependencies {
@@ -66,4 +68,25 @@ subprojects {
 	version = '4.0.0'
 
 	jar { manifest.attributes provider: 'org.fc.zippo' }
+
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+			}
+		}
+		def reporUrl = version.endsWith('SNAPSHOT') ?
+				obr_host_snapshot
+				: obr_host
+		println reporUrl
+		repositories {
+			maven {
+				url = reporUrl
+				credentials {
+					username obr_usr
+					password obr_pwd
+				}
+			}
+		}
+	}
 }
