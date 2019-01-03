@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.fc.zippo</groupId>
   <artifactId>org.fc.zippo.opolicy</artifactId>
-  <version>4.0.0</version>
+  <version>4.0.1</version>
   <dependencies>
     <dependency>
       <groupId>org.apache.felix</groupId>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0" xmlns:m="http://ant.apache.org/ivy/maven">
-  <info organisation="org.fc.zippo" module="opolicy" revision="4.0.0" status="integration" default="true" publication="20181117163525"/>
+  <info organisation="org.fc.zippo" module="opolicy" revision="4.0.1" status="integration" default="true" publication="20190102220349"/>
   <configurations>
     <conf name="apiElements" visibility="private" extends="compile,runtime"/>
     <conf name="archives" visibility="public"/>
