@@ -18,6 +18,7 @@ import onight.osgi.otransio.util.PacketTuplePool;
 import onight.osgi.otransio.util.PacketWriterPool;
 import onight.tfw.async.CompleteHandler;
 import onight.tfw.otransio.api.beans.FramePacket;
+import onight.tfw.outils.conf.PropHelper;
 import onight.tfw.outils.pool.ReusefulLoopPool;
 
 @Slf4j
@@ -135,21 +136,29 @@ public class PacketQueue implements Runnable {
 		if (isStop) {
 			return;
 		}
-		while (greenPool.size() < ckpool.getCore() / 4) {
+		int cc = 0;
+		PropHelper props = new PropHelper(null);
+		while (greenPool.size() < ckpool.getCore() && !isStop
+				&& cc < props.get("org.zippo.otransio.reconnect.try.times", 10)) {
 			conn = ckpool.ensureConnection();
-			if (conn != null) {
+			if (conn != null && conn.isOpen()) {
+				ckpool.addObject(conn);
+			} else {
+				cc++;
+			}
+		}
+		for (int i = 0; i < ckpool.getCore() / 4 && !isStop; i++) {
+			conn = ckpool.borrow();
+			if (conn != null && conn.isOpen()) {
 				greenPool.addObject(conn);
 			}
 		}
-		conn = null;
-
-		while (pioPool.size() < ckpool.getCore() / 4) {
-			conn = ckpool.ensureConnection();
-			if (conn != null) {
+		for (int i = 0; i < ckpool.getCore() / 4 && !isStop; i++) {
+			conn = ckpool.borrow();
+			if (conn != null && conn.isOpen()) {
 				pioPool.addObject(conn);
 			}
 		}
-
 		conn = null;
 		int failedwait = 0;
 		while (!isStop) {
@@ -194,7 +203,7 @@ public class PacketQueue implements Runnable {
 						failedwait = 0;
 					}
 					failedGetConnection++;
-					log.warn("TT1-no more connection for " + name + ",failedcc=" + failedGetConnection + ",failedwait="
+					log.debug("TT1-no more connection for " + name + ",failedcc=" + failedGetConnection + ",failedwait="
 							+ failedwait + ",pool=" + ckpool.getActiveObjs().size() + "/" + ckpool.size() + ",conn="
 							+ conn + ",queuesize=[" + green_queue.size() + "," + pio_queue.size() + "," + queue.size()
 							+ "]");
@@ -219,7 +228,7 @@ public class PacketQueue implements Runnable {
 			// log.error("TTT-tryDirectSendPacket:pool=" +
 			// pool.getActiveObjs().size() + "/" + pool.size() + ",queuesize="
 			// + queue.size() + ",queuename=" + queuename + ",@" + name);
-			long start = System.currentTimeMillis();
+			// long start = System.currentTimeMillis();
 			PacketTuple fp = queue.poll();
 			if (fp != null) {
 				Connection conn = pool.borrow();
@@ -232,7 +241,7 @@ public class PacketQueue implements Runnable {
 						// + ",conn=" + conn);
 						ckpool.removeObject(conn);
 					}
-					log.error("TTT-Create one more connection:pool=" + pool.getActiveObjs().size() + "/" + pool.size()
+					log.debug("TTT-Create one more connection:pool=" + pool.getActiveObjs().size() + "/" + pool.size()
 							+ ",queuesize=" + queue.size() + ",queuename=" + queuename + ",@" + name + ",conn=" + conn);
 					conn = ckpool.ensureConnection();// try to create new one
 				}
@@ -254,7 +263,6 @@ public class PacketQueue implements Runnable {
 						// + pool.size() + ",queuesize=" + queue.size() +
 						// ",queuename=" + queuename + ",@" + name
 						// + ",conn=" + conn);
-
 						ckpool.removeObject(conn);
 					}
 					queue.offer(fp);

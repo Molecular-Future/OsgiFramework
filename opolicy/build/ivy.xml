@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0" xmlns:m="http://ant.apache.org/ivy/maven">
-  <info organisation="org.fc.zippo" module="opolicy" revision="4.0.1" status="integration" default="true" publication="20190102220349"/>
+  <info organisation="org.fc.zippo" module="opolicy" revision="4.0.1" status="integration" default="true" publication="20190104163111"/>
   <configurations>
-    <conf name="apiElements" visibility="private" extends="compile,runtime"/>
+    <conf name="api" visibility="private" extends="compile"/>
+    <conf name="apiElements" visibility="private" extends="api,compile,runtime"/>
     <conf name="archives" visibility="public"/>
     <conf name="compile" visibility="private" extends="includeInJar"/>
     <conf name="compileClasspath" visibility="private" extends="compileOnly,implementation"/>
     <conf name="compileOnly" visibility="private"/>
     <conf name="default" visibility="public" extends="runtimeElements"/>
     <conf name="deployerJars" visibility="public"/>
-    <conf name="implementation" visibility="private" extends="compile"/>
+    <conf name="implementation" visibility="private" extends="api,compile"/>
     <conf name="includeInJar" visibility="public"/>
     <conf name="protobuf" visibility="private"/>
     <conf name="protobufToolsLocator_protoc" visibility="private" transitive="false"/>
@@ -28,7 +29,7 @@
     <conf name="zinc" visibility="private"/>
   </configurations>
   <publications>
-    <artifact name="org.fc.zippo.opolicy" type="jar" ext="jar" conf="archives,runtime,runtimeElements"/>
+    <artifact name="opolicy" type="jar" ext="jar" conf="archives,runtime,runtimeElements"/>
   </publications>
   <dependencies>
     <dependency org="org.apache.felix" name="org.apache.felix.ipojo.manipulator" rev="1.12.1" conf="compile-&gt;default"/>
@@ -44,7 +45,7 @@
     <dependency org="org.ow2.spec.osgi" name="ow2-httpservice-1.2-spec" rev="1.0.0" conf="compile-&gt;default"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="1.7.25" conf="compile-&gt;default"/>
     <dependency org="commons-codec" name="commons-codec" rev="1.11" conf="compile-&gt;default"/>
-    <dependency org="onight.osgi" name="zpp-gradle_1.8" rev="3.3.0" conf="compile-&gt;default"/>
+    <dependency org="onight.osgi" name="zpp-gradle_1.8" rev="3.3.1" conf="compile-&gt;default"/>
     <dependency org="org.fc.zippo" name="org.fc.zippo.oapi" rev="4.0.0" conf="compile-&gt;default"/>
     <dependency org="com.googlecode.protobuf-java-format" name="protobuf-java-format" rev="1.4" conf="includeInJar-&gt;default"/>
     <dependency org="org.projectlombok" name="lombok" rev="1.18.4" conf="includeInJar-&gt;default"/>
@@ -53,6 +54,7 @@
     </dependency>
     <dependency org="junit" name="junit" rev="4.12" conf="testCompile-&gt;default"/>
     <dependency org="com.typesafe.zinc" name="zinc" rev="0.3.7" conf="zinc-&gt;default"/>
+    <exclude org="*" module="org.scala-lang.scala-library" artifact="*" type="*" ext="*" conf="api" matcher="exact"/>
     <exclude org="*" module="org.scala-lang.scala-library" artifact="*" type="*" ext="*" conf="apiElements" matcher="exact"/>
     <exclude org="*" module="org.scala-lang.scala-library" artifact="*" type="*" ext="*" conf="archives" matcher="exact"/>
     <exclude org="*" module="org.scala-lang.scala-library" artifact="*" type="*" ext="*" conf="compile" matcher="exact"/>

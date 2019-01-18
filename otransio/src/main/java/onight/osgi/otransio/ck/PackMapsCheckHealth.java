@@ -39,7 +39,7 @@ public class PackMapsCheckHealth implements Runnable {
 								log.warn("remove timeout sync pack:" + key + ",past["
 										+ (System.currentTimeMillis() - startTime) + "]" + ",pt,name="
 										+ pt.getPackQ().getName() + ",pt.uri=" + pt.getPackQ().getCkpool().getIp() + ":"
-										+ pt.getPackQ().getCkpool().getPort());
+										+ pt.getPackQ().getCkpool().getPort()+",handler=="+pt.getHandler());
 							} else {
 								log.warn("remove timeout sync pack:" + key + ",past["
 										+ (System.currentTimeMillis() - startTime) + "]" + ",pt is null=");
@@ -53,13 +53,14 @@ public class PackMapsCheckHealth implements Runnable {
 			for (String key : rmkeys) {
 				PacketTuple pt = mss.getPackMaps().remove(key);
 				if (pt != null) {
-					mss.getPackPool().retobj(pt);
 					if (pt.getHandler() != null) {
 						try {
 							pt.getHandler().onFailed(new TimeoutException("pack send timeout"));
 						} catch (Exception e) {
+							log.error("on Failied exception:",e);
 						}
 					}
+					mss.getPackPool().retobj(pt);
 				}
 			}
 		} catch (Exception e) {
