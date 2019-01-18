@@ -7,11 +7,11 @@ buildscript {
 		if(project.name!='oapi_1.8'&&project.name!='oapi') {
 //			classpath ("org.fc.zippo:org.fc.zippo.oapi_1.8:4.0.0")
 		}
-		//classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
+		classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
 	}
 }
 
-
+apply plugin: 'com.google.protobuf'
 apply plugin: 'zippo'
 apply plugin: 'maven-publish'
 //apply plugin: 'eclipse-wtp'
@@ -40,11 +40,11 @@ subprojects {
 			if(project.name!='oapi_1.8'&&project.name!='oapi') {
 				classpath ("org.fc.zippo:org.fc.zippo.oapi:4.0.0")
 			}
-			//classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
+			classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
 		}
 	}
 	
-
+	apply plugin: 'com.google.protobuf'
 	apply plugin: 'zippo'
 	apply plugin: 'maven-publish'
 
@@ -68,25 +68,4 @@ subprojects {
 	version = '4.0.0'
 
 	jar { manifest.attributes provider: 'org.fc.zippo' }
-
-	publishing {
-		publications {
-			mavenJava(MavenPublication) {
-				from components.java
-			}
-		}
-		def reporUrl = version.endsWith('SNAPSHOT') ?
-				obr_host_snapshot
-				: obr_host
-		println reporUrl
-		repositories {
-			maven {
-				url = reporUrl
-				credentials {
-					username obr_usr
-					password obr_pwd
-				}
-			}
-		}
-	}
 }
