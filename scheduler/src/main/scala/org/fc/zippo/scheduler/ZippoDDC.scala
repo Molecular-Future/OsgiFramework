@@ -44,9 +44,12 @@ class ZippoDDC extends PMDDC[Message] with IActorDispatcher {
   def init():Unit =  {
     DDCInstance.init();
   }
+  val running = new AtomicBoolean(true);
   @Invalidate
   def destroy() {
+    running.set(false);
     DDCInstance.destroy()
+    
   }
   /**
    * run in seconds at fix delays
@@ -90,6 +93,9 @@ class ZippoDDC extends PMDDC[Message] with IActorDispatcher {
 
   def getExecutorService(poolname: String): ExecutorService = {
     DDCInstance.getExecutorService(poolname)
+  }
+  def isRunning:Boolean = {
+     running.get;
   }
 
 }

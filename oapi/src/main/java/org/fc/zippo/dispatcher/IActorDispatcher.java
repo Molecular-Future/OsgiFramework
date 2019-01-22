@@ -31,6 +31,8 @@ public interface IActorDispatcher {
 
 	public void destroy();
 
+	public boolean isRunning();
+	
 	public void post(FramePacket pack, Runnable runner);
 
 	/**
