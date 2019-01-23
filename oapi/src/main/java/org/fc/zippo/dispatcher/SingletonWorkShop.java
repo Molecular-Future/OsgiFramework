@@ -18,17 +18,22 @@ public abstract class SingletonWorkShop<T> implements Runnable {
 	protected boolean finished = false;
 	long timeoutMS = 1000L;
 
-	protected PropHelper props = new PropHelper(null);
+	protected PropHelper prop = new PropHelper(null);
 
-	public abstract boolean isRunning() ;
+	public abstract boolean isRunning();
+
 	public abstract void runBatch(List<T> items);
 
 	protected LinkedBlockingQueue<T> queue = new LinkedBlockingQueue<>();
 
-	protected int maxQueueSize = props.get("org.zippo.ddc.singleton.queue.size", 1000);
-	protected int pollMaxWaitMS = props.get("org.zippo.ddc.singleton.poll.max.wait.ms", 60 * 1000);
-	protected int pollMinWaitMS = props.get("org.zippo.ddc.singleton.poll.min.wait.ms", 50);
-	protected int batchSize = props.get("org.zippo.ddc.singleton.batch.size", 100);
+	public String getName() {
+		return "default";
+	}
+
+	protected int maxQueueSize = prop.get("org.zippo.ddc.singleton." + getName() + ".queue.size", 1000);
+	protected int pollMaxWaitMS = prop.get("org.zippo.ddc.singleton." + getName() + "poll.max.wait.ms", 60 * 1000);
+	protected int pollMinWaitMS = prop.get("org.zippo.ddc.singleton." + getName() + "poll.min.wait.ms", 50);
+	protected int batchSize = prop.get("org.zippo.ddc.singleton" + getName() + ".batch.size", 100);
 
 	protected AtomicLong counter = new AtomicLong(0);
 
@@ -84,12 +89,13 @@ public abstract class SingletonWorkShop<T> implements Runnable {
 					}
 				}
 			}
+		} catch (java.lang.InterruptedException e) {
+
 		} catch (Throwable t) {
 			log.error("error in run timelimit runner:", t);
 		} finally {
 			finished = true;
 		}
 	}
-
 
 }
