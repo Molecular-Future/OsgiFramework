@@ -18,16 +18,17 @@ public abstract class SingletonWorkShop<T> implements Runnable {
 	protected boolean finished = false;
 	long timeoutMS = 1000L;
 
-	public abstract PropHelper props();
+	protected PropHelper props = new PropHelper(null);
 
-	public abstract IActorDispatcher getDdc();
+	public abstract boolean isRunning() ;
+	public abstract void runBatch(List<T> items);
 
 	protected LinkedBlockingQueue<T> queue = new LinkedBlockingQueue<>();
 
-	protected int maxQueueSize = props().get("org.zippo.ddc.singleton.queue.size", 1000);
-	protected int pollMaxWaitMS = props().get("org.zippo.ddc.singleton.poll.max.wait.ms", 60 * 1000);
-	protected int pollMinWaitMS = props().get("org.zippo.ddc.singleton.poll.min.wait.ms", 50);
-	protected int batchSize = props().get("org.zippo.ddc.singleton.batch.size", 100);
+	protected int maxQueueSize = props.get("org.zippo.ddc.singleton.queue.size", 1000);
+	protected int pollMaxWaitMS = props.get("org.zippo.ddc.singleton.poll.max.wait.ms", 60 * 1000);
+	protected int pollMinWaitMS = props.get("org.zippo.ddc.singleton.poll.min.wait.ms", 50);
+	protected int batchSize = props.get("org.zippo.ddc.singleton.batch.size", 100);
 
 	protected AtomicLong counter = new AtomicLong(0);
 
@@ -64,26 +65,22 @@ public abstract class SingletonWorkShop<T> implements Runnable {
 	public void run() {
 		try {
 			ArrayList<T> procList = new ArrayList<>();
-			while (getDdc() == null || getDdc().isRunning()) {
-				if (getDdc() == null) {
-					Thread.sleep(10 * 1000);
-				} else {
-					T t = queue.poll(getLoopMaxWaitMS(), TimeUnit.MILLISECONDS);
-					for (int i = 0; i < batchSize && t != null; i++) {
-						procList.add(t);
-						counter.decrementAndGet();
-						if (i < batchSize - 1) {
-							t = queue.poll(getLoopMinWaitMS(), TimeUnit.MILLISECONDS);
-						}
+			while (isRunning()) {
+				T t = queue.poll(getLoopMaxWaitMS(), TimeUnit.MILLISECONDS);
+				for (int i = 0; i < batchSize && t != null; i++) {
+					procList.add(t);
+					counter.decrementAndGet();
+					if (i < batchSize - 1) {
+						t = queue.poll(getLoopMinWaitMS(), TimeUnit.MILLISECONDS);
 					}
-					if (procList.size() > 0) {
-						try {
-							runBatch(procList);
-						} catch (Throwable th) {
-							log.warn("error in runing batch:" + procList.size(), th);
-						} finally {
-							procList.clear();
-						}
+				}
+				if (procList.size() > 0) {
+					try {
+						runBatch(procList);
+					} catch (Throwable th) {
+						log.warn("error in runing batch:" + procList.size(), th);
+					} finally {
+						procList.clear();
 					}
 				}
 			}
@@ -94,6 +91,5 @@ public abstract class SingletonWorkShop<T> implements Runnable {
 		}
 	}
 
-	public abstract void runBatch(List<T> items);
 
 }
