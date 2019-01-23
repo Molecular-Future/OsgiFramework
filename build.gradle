@@ -1,7 +1,6 @@
 
 buildscript {
-	repositories { maven { url "http://172.18.80.253:8081/nexus/content/groups/public/" } }
-
+	repositories{ maven{ url "$repos_host" } }
 	dependencies {
 		classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
 		if(project.name!='oapi_1.8'&&project.name!='oapi') {
@@ -33,8 +32,7 @@ subprojects {
 
 	
 	buildscript {
-		repositories { maven { url "http://172.18.80.253:8081/nexus/content/groups/public/" } }
-	
+		repositories{ maven{ url "$repos_host" } }
 		dependencies {
 			classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
 			if(project.name!='oapi_1.8'&&project.name!='oapi') {
