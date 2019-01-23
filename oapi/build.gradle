@@ -23,6 +23,7 @@ dependencies {
 	
 	compile 'javax.servlet:javax.servlet-api:3.1.0'
 	compile 'com.fasterxml.uuid:java-uuid-generator:3.1.5'
+	compile 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
 
 }
 
