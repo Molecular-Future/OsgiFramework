@@ -115,8 +115,8 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 		if (conn != null) {
 			mss.getOsm().getCk().addCheckHealth(conn);
 		} else if (size() > 0) {
-			log.error("cannot get more Connection:cursize=" + size() + ",max=" + max + ",try=" + trytimes + ",nameid="
-					+ nameid + ",ip=" + ip + ",port=" + port);
+			log.error("cannot get more Connection:cursize=" + size() + ",active=" + getActiveObjs().size() + ",max="
+					+ max + ",try=" + trytimes + ",nameid=" + nameid + ",ip=" + ip + ",port=" + port);
 		}
 		return conn;
 	}
@@ -138,7 +138,8 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 					});
 					final FramePacket pack = mss.getLocalModulesPacket();
 					pack.putHeader(OSocketImpl.PACK_FROM, mss.getRmb().getNodeInfo().getNodeName());
-//					log.debug("write LoginModulePack from {}", mss.getRmb().getNodeInfo().getUname());
+					// log.debug("write LoginModulePack from {}",
+					// mss.getRmb().getNodeInfo().getUname());
 					// log.trace("!!WriteLocalModulesPacket TO:" +
 					// conn.getPeerAddress() + ",From="
 					// + conn.getLocalAddress() + ",pack=" + pack.getFixHead());
@@ -165,7 +166,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 				// return createOneConnectionBySubNode(maxtries);
 			} catch (Exception e) {
 				// creating new Connection
-				log.info("error in create out conn:" + ip + ",port=" + port+",e="+e.getMessage());
+				log.info("error in create out conn:" + ip + ",port=" + port + ",e=" + e.getMessage());
 			}
 		}
 		if (waitms <= 0) {
@@ -176,7 +177,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 					Thread.sleep(100);
 				} catch (Exception e) {
 				}
-			}else{
+			} else {
 				try {
 					Thread.sleep(1000);
 				} catch (Exception e) {
@@ -184,7 +185,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 			}
 			return null;
 		}
-		if (size() > max) {
+		if (size() >= max) {
 			Iterator<Connection> it = this.iterator();
 			List<Connection> rmList = new ArrayList<>();
 			while (it.hasNext()) {
@@ -196,7 +197,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 			for (Connection conn : rmList) {
 				removeObject(conn);
 			}
-			if (size() < core) {
+			if (size() < max) {
 				return createOneConnection(1, -1);
 			}
 		}

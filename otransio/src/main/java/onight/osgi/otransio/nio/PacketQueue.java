@@ -87,13 +87,13 @@ public class PacketQueue implements Runnable {
 
 		while (!queuetooffer.offer(packPool.borrowTuple(fp, handler, this)))
 			;
-		if (polling.get()) {
-			if (queuetooffer == green_queue) {
-				tryDirectSendPacket(green_queue, greenPool, "green");
-			} else if (queuetooffer == pio_queue) {
-				tryDirectSendPacket(pio_queue, pioPool, "pio");
-			}
-		}
+		// if (polling.get()) {
+		// if (queuetooffer == green_queue) {
+		// tryDirectSendPacket(green_queue, greenPool, "green");
+		// } else if (queuetooffer == pio_queue) {
+		// tryDirectSendPacket(pio_queue, pioPool, "pio");
+		// }
+		// }
 	}
 
 	public void offer(PacketTuple pt) {
@@ -101,13 +101,13 @@ public class PacketQueue implements Runnable {
 
 		while (!queuetooffer.offer(pt))
 			;
-		if (polling.get()) {
-			if (queuetooffer == green_queue) {
-				tryDirectSendPacket(green_queue, greenPool, "green");
-			} else if (queuetooffer == pio_queue) {
-				tryDirectSendPacket(pio_queue, pioPool, "pio");
-			}
-		}
+		// if (polling.get()) {
+		// if (queuetooffer == green_queue) {
+		// tryDirectSendPacket(green_queue, greenPool, "green");
+		// } else if (queuetooffer == pio_queue) {
+		// tryDirectSendPacket(pio_queue, pioPool, "pio");
+		// }
+		// }
 	}
 
 	public PacketTuple poll(long waitms) throws InterruptedException {
@@ -138,7 +138,7 @@ public class PacketQueue implements Runnable {
 		}
 		int cc = 0;
 		PropHelper props = new PropHelper(null);
-		while (greenPool.size() < ckpool.getCore() && !isStop
+		while (ckpool.size() < ckpool.getCore() && !isStop
 				&& cc < props.get("org.zippo.otransio.reconnect.try.times", 10)) {
 			conn = ckpool.ensureConnection();
 			if (conn != null && conn.isOpen()) {
@@ -232,6 +232,8 @@ public class PacketQueue implements Runnable {
 			PacketTuple fp = queue.poll();
 			if (fp != null) {
 				Connection conn = pool.borrow();
+				int cc = 0;
+				ReusefulLoopPool<Connection>  retPut_ckpool = pool;
 				if (conn == null || !conn.isOpen()) {
 					if (conn != null) {
 						// log.error("TTT-remove not open connection:pool=" +
@@ -240,13 +242,22 @@ public class PacketQueue implements Runnable {
 						// ",queuename=" + queuename + ",@" + name
 						// + ",conn=" + conn);
 						ckpool.removeObject(conn);
+						pool.removeObject(conn);
 					}
 					log.debug("TTT-Create one more connection:pool=" + pool.getActiveObjs().size() + "/" + pool.size()
 							+ ",queuesize=" + queue.size() + ",queuename=" + queuename + ",@" + name + ",conn=" + conn);
 					conn = ckpool.ensureConnection();// try to create new one
+					if (conn != null && conn.isOpen()) {
+						if (pool.size() > ckpool.getCore() / 4) {
+							retPut_ckpool = ckpool;
+						}else {
+							retPut_ckpool.getAllObjs().put(conn, conn);
+						}
+					}
+					cc++;
 				}
 				if (conn != null && conn.isOpen()) {
-					writer = writerPool.borrowWriter(queuename, conn, pool, this);
+					writer = writerPool.borrowWriter(queuename, conn, retPut_ckpool, this);
 					FramePacket packet = fp.getPack();
 					ensurePacketID(packet, fp);
 					writer.arrays.add(fp);

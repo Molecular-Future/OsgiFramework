@@ -96,6 +96,12 @@ public class RemoteModuleSession extends PSession {
 		sb.append(",\"port\":\"").append(nodeInfo.getPort()).append("\"");
 		sb.append(",\"totalconn\":").append(connsPool.size());
 		sb.append(",\"qstop\":").append(writerQ.isStop());
+		sb.append(",\"connpool\":[")
+		.append("\"").append(writerQ.getCkpool().getActiveObjs().size()).append("/").append(writerQ.getCkpool().size()).append("\"")
+		.append(",\"").append(writerQ.getPioPool().getActiveObjs().size()).append("/").append(writerQ.getPioPool().size()).append("\"")
+		.append(",\"").append(writerQ.getGreenPool().getActiveObjs().size()).append("/").append(writerQ.getGreenPool().size()).append("\"")
+		.append("]");
+
 		sb.append(",\"freeconn\":")
 				.append(connsPool.getActiveObjs().size() + writerQ.getGreenPool().size() + writerQ.getPioPool().size());
 		sb.append(",\"queue\":[").append(writerQ.getGreen_queue().size()).append(",")
