@@ -232,7 +232,6 @@ public class PacketQueue implements Runnable {
 			PacketTuple fp = queue.poll();
 			if (fp != null) {
 				Connection conn = pool.borrow();
-				int cc = 0;
 				ReusefulLoopPool<Connection>  retPut_ckpool = pool;
 				if (conn == null || !conn.isOpen()) {
 					if (conn != null) {
@@ -254,7 +253,6 @@ public class PacketQueue implements Runnable {
 							retPut_ckpool.getAllObjs().put(conn, conn);
 						}
 					}
-					cc++;
 				}
 				if (conn != null && conn.isOpen()) {
 					writer = writerPool.borrowWriter(queuename, conn, retPut_ckpool, this);
@@ -275,6 +273,7 @@ public class PacketQueue implements Runnable {
 						// ",queuename=" + queuename + ",@" + name
 						// + ",conn=" + conn);
 						ckpool.removeObject(conn);
+						pool.removeObject(conn);
 					}
 					queue.offer(fp);
 					// log.error("TTT-no more connection for " + queuename + "
@@ -286,7 +285,7 @@ public class PacketQueue implements Runnable {
 		} catch (Throwable e) {
 			log.error("TTT-err in send Packet for queue=" + queuename, e);
 		} finally {
-			Thread.currentThread().setName("transioworker");
+			Thread.currentThread().setName(name);
 		}
 	}
 
