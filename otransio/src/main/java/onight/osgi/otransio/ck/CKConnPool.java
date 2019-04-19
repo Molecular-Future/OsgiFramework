@@ -138,7 +138,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 					});
 					final FramePacket pack = mss.getLocalModulesPacket();
 					pack.putHeader(OSocketImpl.PACK_FROM, mss.getRmb().getNodeInfo().getNodeName());
-					log.debug("write LoginModulePack from {}", mss.getRmb().getNodeInfo().getUname());
+//					log.debug("write LoginModulePack from {}", mss.getRmb().getNodeInfo().getUname());
 					// log.trace("!!WriteLocalModulesPacket TO:" +
 					// conn.getPeerAddress() + ",From="
 					// + conn.getLocalAddress() + ",pack=" + pack.getFixHead());
@@ -165,7 +165,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 				// return createOneConnectionBySubNode(maxtries);
 			} catch (Exception e) {
 				// creating new Connection
-				log.error("error in create out conn:" + ip + ",port=" + port, e);
+				log.info("error in create out conn:" + ip + ",port=" + port+",e="+e.getMessage());
 			}
 		}
 		if (waitms <= 0) {
@@ -184,7 +184,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 			}
 			return null;
 		}
-		if (size() >= max) {
+		if (size() > max) {
 			Iterator<Connection> it = this.iterator();
 			List<Connection> rmList = new ArrayList<>();
 			while (it.hasNext()) {
@@ -196,7 +196,7 @@ public class CKConnPool extends ReusefulLoopPool<Connection> {
 			for (Connection conn : rmList) {
 				removeObject(conn);
 			}
-			if (size() < max) {
+			if (size() < core) {
 				return createOneConnection(1, -1);
 			}
 		}

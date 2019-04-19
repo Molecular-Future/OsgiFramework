@@ -39,9 +39,9 @@ public class MSessionSets {
 	ConcurrentHashMap<String, PacketTuple> resendMap = new ConcurrentHashMap<>();
 	ConcurrentHashMap<String, Long> duplicateCheckMap = new ConcurrentHashMap<>();
 	int max_packet_buffer = 10;
-//	ForkJoinPool exec;
-//	ForkJoinPool readerexec;
-//	ForkJoinPool writerexec;
+	// ForkJoinPool exec;
+	// ForkJoinPool readerexec;
+	// ForkJoinPool writerexec;
 
 	int resendBufferSize = 100000;
 	int resendTimeOutMS = 60000;
@@ -50,7 +50,8 @@ public class MSessionSets {
 	AtomicLong resendTimes = new AtomicLong(0);
 	AtomicLong resendPacketTimes = new AtomicLong(0);
 	OSocketImpl osocket;
-	public MSessionSets(OSocketImpl osocket,PropHelper params) {
+
+	public MSessionSets(OSocketImpl osocket, PropHelper params) {
 		packIDKey = UUIDGenerator.generate() + ".SID";
 		this.params = params;
 		this.osocket = osocket;
@@ -64,12 +65,15 @@ public class MSessionSets {
 		// params.get("org.zippo.otransio.write_thread_count", 10);
 		packPool = new PacketTuplePool(params.get("org.zippo.otransio.maxpackbuffer", 10000));
 		writerPool = new PacketWriterPool(params.get("org.zippo.otransio.maxwriterbuffer", 1000));
-//		exec = new ForkJoinPool(
-//				params.get("org.zippo.otransio.exec.parrel", java.lang.Runtime.getRuntime().availableProcessors() * 2));
-//		writerexec = new ForkJoinPool(params.get("org.zippo.otransio.writerexec.parrel",
-//				java.lang.Runtime.getRuntime().availableProcessors() * 2));
-//		readerexec = new ForkJoinPool(params.get("org.zippo.otransio.readerexec.parrel",
-//				java.lang.Runtime.getRuntime().availableProcessors() * 2));
+		// exec = new ForkJoinPool(
+		// params.get("org.zippo.otransio.exec.parrel",
+		// java.lang.Runtime.getRuntime().availableProcessors() * 2));
+		// writerexec = new
+		// ForkJoinPool(params.get("org.zippo.otransio.writerexec.parrel",
+		// java.lang.Runtime.getRuntime().availableProcessors() * 2));
+		// readerexec = new
+		// ForkJoinPool(params.get("org.zippo.otransio.readerexec.parrel",
+		// java.lang.Runtime.getRuntime().availableProcessors() * 2));
 	}
 
 	OutgoingSessionManager osm;
@@ -114,11 +118,14 @@ public class MSessionSets {
 		sb.append(",\"recv\":").append(recvCounter.get());
 		sb.append(",\"send\":").append(sendCounter.get());
 		sb.append(",\"sent\":").append(sentCounter.get());
-//		sb.append(",\"execpool\":\"").append(exec.getActiveThreadCount() + "/" + exec.getPoolSize()).append("\"");
-//		sb.append(",\"readerexecpool\":\"").append(readerexec.getActiveThreadCount() + "/" + readerexec.getPoolSize())
-//				.append("\"");
-//		sb.append(",\"writerexecpool\":\"").append(writerexec.getActiveThreadCount() + "/" + writerexec.getPoolSize())
-//				.append("\"");
+		// sb.append(",\"execpool\":\"").append(exec.getActiveThreadCount() + "/" +
+		// exec.getPoolSize()).append("\"");
+		// sb.append(",\"readerexecpool\":\"").append(readerexec.getActiveThreadCount()
+		// + "/" + readerexec.getPoolSize())
+		// .append("\"");
+		// sb.append(",\"writerexecpool\":\"").append(writerexec.getActiveThreadCount()
+		// + "/" + writerexec.getPoolSize())
+		// .append("\"");
 		sb.append(",\"pioresendsize\":").append(resendMap.size());
 		sb.append(",\"pioduplicatesize\":").append(duplicateCheckMap.size());
 		sb.append(",\"packchecksize\":").append(packMaps.size());
@@ -143,11 +150,14 @@ public class MSessionSets {
 		sb.append(",\"recv\":").append(recvCounter.get());
 		sb.append(",\"send\":").append(sendCounter.get());
 		sb.append(",\"sent\":").append(sentCounter.get());
-//		sb.append(",\"execpool\":\"").append(exec.getActiveThreadCount() + "/" + exec.getPoolSize()).append("\"");
-//		sb.append(",\"readerexecpool\":\"").append(readerexec.getActiveThreadCount() + "/" + readerexec.getPoolSize())
-//				.append("\"");
-//		sb.append(",\"writerexecpool\":\"").append(writerexec.getActiveThreadCount() + "/" + writerexec.getPoolSize())
-//				.append("\"");
+		// sb.append(",\"execpool\":\"").append(exec.getActiveThreadCount() + "/" +
+		// exec.getPoolSize()).append("\"");
+		// sb.append(",\"readerexecpool\":\"").append(readerexec.getActiveThreadCount()
+		// + "/" + readerexec.getPoolSize())
+		// .append("\"");
+		// sb.append(",\"writerexecpool\":\"").append(writerexec.getActiveThreadCount()
+		// + "/" + writerexec.getPoolSize())
+		// .append("\"");
 		sb.append(",\"pioresendsize\":").append(resendMap.size());
 		sb.append(",\"pioduplicatesize\":").append(duplicateCheckMap.size());
 		sb.append(",\"packchecksize\":").append(packMaps.size());
@@ -181,7 +191,7 @@ public class MSessionSets {
 				}
 			}
 		}
-		sb.append("]");
+		sb.append("\"");
 		sb.append(",\"sessions\":[");
 		i = 0;
 		for (Entry<String, PSession> kv : sessionByNodeName.entrySet()) {
@@ -215,23 +225,27 @@ public class MSessionSets {
 	public void updateOrPutSession(NodeInfo node, RemoteModuleSession session) {
 		synchronized ((node.getURI() + "").intern()) {
 			String oldname = null;
-			for (Map.Entry<String, PSession> kv : sessionByNodeName.entrySet()) {
-				if (kv.getValue() instanceof RemoteModuleSession) {
-					RemoteModuleSession lps = (RemoteModuleSession) kv.getValue();
-					if (lps.nodeInfo.getURI().equals(node.getURI()) && !node.getNodeName().equals(kv.getKey())) {
-						//
-						log.debug("updateSession to new::" + kv.getKey() + "==>" + node.getNodeName());
-						oldname = kv.getKey();
-						break;
+			try {
+				for (Map.Entry<String, PSession> kv : sessionByNodeName.entrySet()) {
+					if (kv.getValue() instanceof RemoteModuleSession) {
+						RemoteModuleSession lps = (RemoteModuleSession) kv.getValue();
+						if (lps.nodeInfo.getURI().equals(node.getURI()) && !node.getNodeName().equals(kv.getKey())) {
+							//
+							log.debug("updateSession to new::" + kv.getKey() + "==>" + node.getNodeName());
+							oldname = kv.getKey();
+							break;
+						}
 					}
 				}
-			}
-			if (oldname != null) {
-				PSession oldsession = sessionByNodeName.remove(oldname);
-				log.debug("remove oldsession:" + oldsession + "===>" + session);
-				sessionByNodeName.put(node.getNodeName(), session);
-			} else {
-				sessionByNodeName.put(node.getNodeName(), session);
+				if (oldname != null) {
+					PSession oldsession = sessionByNodeName.remove(oldname);
+					log.debug("remove oldsession:" + oldsession + "===>" + session);
+					sessionByNodeName.put(node.getNodeName(), session);
+				} else {
+					sessionByNodeName.put(node.getNodeName(), session);
+				}
+			} catch (java.util.ConcurrentModificationException c) {
+				log.debug("RemoteModuleSession change:"+c.getMessage()+",node="+node.getURI());
 			}
 		}
 	}
@@ -279,7 +293,7 @@ public class MSessionSets {
 		return ret;
 	}
 
-	public  LocalModuleSession addLocalMoudle(String module) {
+	public LocalModuleSession addLocalMoudle(String module) {
 		// localSessionsByModule.put(session.getModule(), session);
 		LocalModuleSession lms = localsessionByModule.get(module);
 		if (lms == null) {

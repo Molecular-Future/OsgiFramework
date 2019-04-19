@@ -41,7 +41,7 @@ public class PacketQueue implements Runnable {
 	int max_packet_buffer = 10;
 	Executor subexec;
 	AtomicBoolean polling = new AtomicBoolean(false);
-	AtomicLong packCounter = new AtomicLong(0);
+	static AtomicLong packCounter = new AtomicLong(0);
 	int maxResendBufferSize = 100000;
 
 	public static String PACK_RESEND_ID = "_PRID";
