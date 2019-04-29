@@ -2,7 +2,7 @@
 buildscript {
 	repositories{ maven{ url "$repos_host" } }
 	dependencies {
-		classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
+		classpath "onight.osgi:zpp-gradle_1.8:3.3.1"
 		if(project.name!='oapi_1.8'&&project.name!='oapi') {
 //			classpath ("org.fc.zippo:org.fc.zippo.oapi_1.8:4.0.0")
 		}
@@ -34,7 +34,7 @@ subprojects {
 	buildscript {
 		repositories{ maven{ url "$repos_host" } }
 		dependencies {
-			classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
+			classpath "onight.osgi:zpp-gradle_1.8:3.3.1"
 			if(project.name!='oapi_1.8'&&project.name!='oapi') {
 				classpath ("org.fc.zippo:org.fc.zippo.oapi:4.0.2")
 			}

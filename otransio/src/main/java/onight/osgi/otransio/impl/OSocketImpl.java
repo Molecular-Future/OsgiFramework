@@ -176,6 +176,10 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 	}
 
 	public void onPacket(FramePacket pack, final CompleteHandler handler, Connection<?> conn) throws TransIOException {
+		/**
+		 * 1 登录消息：在MSessionSets中发送
+		 */
+
 		if (PackHeader.REMOTE_LOGIN.equals(pack.getModuleAndCMD()) && conn != null) {// 来自远端的登录
 			RemoteModuleBean rmb = pack.parseBO(RemoteModuleBean.class);
 			String node_from = pack.getExtStrProp(PACK_FROM);
@@ -191,6 +195,7 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 			if (node_from != null) {
 				PSession session = mss.byNodeName(node_from);
 				if (session != null && session instanceof RemoteModuleSession) {
+					//如果已经有session，则把连接加入到session
 					RemoteModuleSession rms = (RemoteModuleSession) session;
 					rms.addConnection(conn);
 					CKConnPool ckpool = rms.getConnsPool();
@@ -198,6 +203,7 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 					ckpool.setPort(rmb.getNodeInfo().getPort());
 					// rms.getWriterQ().resendBacklogs();
 				} else {
+					//如果没有session，则创建一个
 					try {
 						osm.createOutgoingSSByURI(rmb.getNodeInfo());
 					} catch (NoneServerException e) {
@@ -253,7 +259,9 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 
 		PSession ms = null;
 
-		if (StringUtils.isNotBlank(destTO) && conn == null) {// 固定给某个节点id的
+		// 固定给某个节点id的
+		if (StringUtils.isNotBlank(destTO) && conn == null) {
+			//通过nodeName，发送给一个节点
 			ms = mss.byNodeName(destTO);
 			if (ms == null) {// not found
 				String uri = pack.getExtStrProp(PACK_URI);
@@ -282,7 +290,9 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 					}
 				}
 			}
-		} else {// re
+		}
+		else {
+			// re
 			if (pack.isResp() && conn != null) {
 				log.error("pack respone to unknow :" + pack.getCMD() + "" + pack.getModule() + "," + pack.getExtHead()
 						+ ",bodysize=" + pack.getFixHead().getBodysize());

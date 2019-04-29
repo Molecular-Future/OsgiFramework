@@ -8,6 +8,8 @@ dependencies {
 	includeInJar 'org.glassfish.grizzly:grizzly-websockets:2.4.3.1'
 	includeInJar 'org.glassfish.grizzly:grizzly-http-server:2.4.3.1'
 	includeInJar 'com.github.jnr:jnr-posix:3.0.46'
+	includeInJar 'io.netty:netty-all:4.1.35.Final'
+	includeInJar 'com.google.guava:guava:27.0.1-jre'
 }
 version = '4.0.0'
 jar {
