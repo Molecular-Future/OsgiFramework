@@ -7,6 +7,8 @@ import onight.tfw.otransio.api.beans.FixHeader;
 import onight.tfw.otransio.api.beans.FramePacket;
 
 public final class Packets {
+
+    public static final String DROP_CONN = "DROP**";
     /**
      * 创建心跳消息
      * @param nodeName 节点名称

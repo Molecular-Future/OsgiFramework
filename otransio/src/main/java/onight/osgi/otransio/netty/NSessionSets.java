@@ -4,8 +4,10 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.impl.NodeInfo;
 import onight.osgi.otransio.nio.PacketTuple;
+import onight.osgi.otransio.sm.RemoteModuleBean;
 import onight.osgi.otransio.util.ParamConfig;
 import onight.tfw.otransio.api.session.LocalModuleSession;
+import onight.tfw.otransio.api.session.PSession;
 import onight.tfw.outils.conf.PropHelper;
 import onight.tfw.outils.serialize.UUIDGenerator;
 import com.google.common.cache.Cache;
@@ -22,11 +24,32 @@ public class NSessionSets {
     PropHelper params;
     Cache<String, PacketTuple> packsCache;
 
+    RemoteModuleBean self = new RemoteModuleBean();
+
     @Getter
     String packIDKey;
 
     Map<String, LocalModuleSession> localModules = new HashMap<>();
     NodeInfo nodeInfo = new NodeInfo();
+
+
+    public String selfNodeName(){
+        return self.getNodeInfo().getNodeName();
+    }
+
+    public PacketTuple removeCachePack(String packId){
+        PacketTuple pt = packsCache.getIfPresent(packId);
+        packsCache.invalidate(packId);
+        return pt;
+    }
+
+    public PSession byNodeName(String nodeName){
+        return null;
+    }
+
+    public void dropSession(String nodeName){
+        //TODO 关闭session
+    }
 
 
     NSessionSets(NSocket socket, PropHelper params){
