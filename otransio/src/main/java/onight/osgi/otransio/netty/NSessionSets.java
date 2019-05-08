@@ -60,7 +60,7 @@ public class NSessionSets {
     }
 
     private Cache<String, PacketTuple> buildPacketCache(){
-        Cache<String, PacketTuple> cache = CacheBuilder.newBuilder()
+        return CacheBuilder.newBuilder()
                 .maximumSize(ParamConfig.PACK_CAHCE_MAXSIZE)
                 .expireAfterAccess(ParamConfig.RESEND_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .removalListener(rmv->{
@@ -78,7 +78,6 @@ public class NSessionSets {
                     }
                 })
                 .build();
-        return cache;
     }
     private void logTimeoutPacket(String key, PacketTuple pt) {
         try {

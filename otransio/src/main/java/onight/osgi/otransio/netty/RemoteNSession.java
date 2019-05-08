@@ -5,7 +5,9 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import onight.osgi.otransio.impl.NodeInfo;
+import onight.osgi.otransio.nio.PacketTuple;
 import onight.tfw.async.CompleteHandler;
+import onight.tfw.otransio.api.PackHeader;
 import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.PSession;
 
@@ -17,10 +19,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class RemoteNSession extends PSession {
 
-    private static Comparator<FramePacket> fpComparator = new Comparator<FramePacket>() {
+    private static Comparator<PacketTuple> fpComparator = new Comparator<PacketTuple>() {
         @Override
-        public int compare(FramePacket o1, FramePacket o2) {
-            return o1.getFixHead().getPrio()-o2.getFixHead().getPrio();
+        public int compare(PacketTuple o1, PacketTuple o2) {
+            return o1.getPack().getFixHead().getPrio()-o2.getPack().getFixHead().getPrio();
         }
     };
     private final String rand = "r_" + String.format("%05d", (int) (Math.random() * 100000)) + "_";
@@ -33,7 +35,7 @@ public class RemoteNSession extends PSession {
     private NSessionSets nss;
     private EventExecutorGroup eeg;
     private AtomicReference<Iterator<Channel>> channelItRef = new AtomicReference<>();
-    private PriorityBlockingQueue<FramePacket> writeQ;
+    private PriorityBlockingQueue<PacketTuple> writeQ;
 
     @SuppressWarnings("unchecked")
     public RemoteNSession(NodeInfo nodeInfo, NSessionSets nss, EventExecutorGroup eeg){
@@ -57,6 +59,25 @@ public class RemoteNSession extends PSession {
     @Override
     public void onPacket(FramePacket pack, CompleteHandler handler) {
         String packId = null;
+        if(pack.isSync() && handler!=null){
+            packId = genPackID();
+            pack.putHeader(nss.getPackIDKey(), packId);
+            Object to_pack = pack.getExtHead().remove(PackHeader.PACK_TO);
+            if (to_pack != null) {
+                pack.getExtHead().append(PackHeader.PACK_TO + "_D", to_pack);
+            }
+            nss.packsCache.put(packId,
+                    new PacketTuple(pack, handler,
+                            false, 0, -1,
+                            false, null));
+        }
+
+        Channel ch = nextChannel();
+        if(ch==null){
+            writeQ.offer(new PacketTuple(pack, handler,
+                    false, 0, -1,
+                    false, null));
+        }
 
     }
 
