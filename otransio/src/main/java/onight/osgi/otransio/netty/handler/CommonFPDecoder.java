@@ -18,8 +18,6 @@ import java.util.List;
 @Slf4j
 public class CommonFPDecoder extends MessageToMessageDecoder<FramePacket> {
 
-    private static final AttributeKey<RemoteModuleBean> AUTH_INFO_KEY = AttributeKey.newInstance("nsock.auth.info");
-
     private NSessionSets nss;
 
     public CommonFPDecoder(NSessionSets nss){
@@ -41,7 +39,6 @@ public class CommonFPDecoder extends MessageToMessageDecoder<FramePacket> {
     }
 
     private void processLogin(ChannelHandlerContext ctx, FramePacket msg){
-        //TODO 处理登录消息
         RemoteModuleBean rmb = msg.parseBO(RemoteModuleBean.class);
         String nodeFrom = msg.getExtStrProp(PackHeader.PACK_FROM);
         if (StringUtils.isBlank(nodeFrom)) {
@@ -50,18 +47,20 @@ public class CommonFPDecoder extends MessageToMessageDecoder<FramePacket> {
             rmb.getNodeInfo().setNodeName(nodeFrom);
         }
         if (nodeFrom != null) {
-            PSession session = nss.byNodeName(nodeFrom);
-            if (session != null && session instanceof RemoteNSession) {
+            PSession session = nss.session(nodeFrom, rmb.getNodeInfo());
+            if (session instanceof RemoteNSession) {
                 //如果已经有session，则把连接加入到session
                 RemoteNSession rns = (RemoteNSession) session;
-
-                // rms.getWriterQ().resendBacklogs();
-            } else {
-                //如果没有session，则创建一个
+                rns.addChannel(ctx.channel());
+                String old = ctx.channel().attr(Packets.ATTR_AUTH_KEY).setIfAbsent(rmb.getNodeInfo().getNodeName());
+                if(old!=null){
+                    log.error("receive duplication login message! ch={}", ctx.channel());
+                    ctx.channel().close();
+                }
             }
-            RemoteModuleBean old = ctx.channel().attr(AUTH_INFO_KEY).setIfAbsent(rmb);
-            if(old!=null){
-                //TODO  收到重复的登录消息
+            else{
+                log.error("remote session not found: name={}, ch={}", rmb.getNodeInfo().getNodeName(), ctx.channel());
+                ctx.channel().close();
             }
         } else {
             log.debug("nodeFrom is null.");
@@ -70,9 +69,9 @@ public class CommonFPDecoder extends MessageToMessageDecoder<FramePacket> {
 
     private void processDrop(ChannelHandlerContext ctx, FramePacket msg) {
         log.error("get drop connection message");
-        RemoteModuleBean rmb = ctx.channel().attr(AUTH_INFO_KEY).get();
-        if (rmb != null) {
-            nss.dropSession(rmb.getNodeInfo().getNodeName());
+        String  name = ctx.channel().attr(Packets.ATTR_AUTH_KEY).get();
+        if (name != null) {
+            nss.dropSession(name, false);
         }
         ctx.close();
     }

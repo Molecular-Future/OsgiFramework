@@ -1,40 +1,66 @@
 package onight.osgi.otransio.netty;
 
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Promise;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.impl.NodeInfo;
 import onight.osgi.otransio.nio.PacketTuple;
 import onight.osgi.otransio.sm.RemoteModuleBean;
 import onight.osgi.otransio.util.ParamConfig;
+import onight.tfw.async.CallBack;
+import onight.tfw.otransio.api.MessageException;
+import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.LocalModuleSession;
 import onight.tfw.otransio.api.session.PSession;
-import onight.tfw.outils.conf.PropHelper;
 import onight.tfw.outils.serialize.UUIDGenerator;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.fc.zippo.dispatcher.IActorDispatcher;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class NSessionSets {
-    NSocket socket;
-    PropHelper params;
-    Cache<String, NPacketTuple> waitResponsePacks;
-
-    RemoteModuleBean self = new RemoteModuleBean();
+    private NSocketImpl socket;
+    private Cache<String, NPacketTuple> waitResponsePacks;
+    private IActorDispatcher dispatcher;
+    private EventExecutorGroup eeg;
+    private LocalModuleManager localSessions;
+    private RemoteSessionManager remoteSessions;
+    @Getter
+    private String packIDKey;
 
     @Getter
-    String packIDKey;
+    private RemoteModuleBean self = new RemoteModuleBean();
 
-    Map<String, LocalModuleSession> localModules = new HashMap<>();
-    NodeInfo nodeInfo = new NodeInfo();
-
+    NSessionSets(NSocketImpl socket, IActorDispatcher dispatcher){
+        this.socket = socket;
+        this.packIDKey = UUIDGenerator.generate() + ".SID";
+        this.waitResponsePacks = buildPacketCache();
+        this.dispatcher =dispatcher;
+        this.eeg = new DefaultEventExecutorGroup(ParamConfig.NSOCK_THREAD_COUNT);
+        this.remoteSessions = new RemoteSessionManager(this, this.eeg);
+        this.localSessions = new LocalModuleManager(this, this.dispatcher);
+    }
 
     public String selfNodeName(){
         return self.getNodeInfo().getNodeName();
+    }
+
+    public void changeSelfNodeName(String name){
+        self.getNodeInfo().setNodeName(name);
+    }
+
+    public <T> Promise<T> newPromise(){
+        return eeg.next().newPromise();
+    }
+
+    public void addCachePack(String packId, NPacketTuple packetTuple){
+        waitResponsePacks.put(packId, packetTuple);
     }
 
     public NPacketTuple removeCachePack(String packId){
@@ -43,20 +69,34 @@ public class NSessionSets {
         return pt;
     }
 
-    public PSession byNodeName(String nodeName){
-        return null;
+    public PSession session(String key, NodeInfo node){
+        if(node==null||node.getNodeName()==null){
+            log.warn("nodeInfo is null or name is null.");
+            return null;
+        }
+        if(isLocalSession(node)){
+            return localSessions.session(key, node);
+        }
+        else{
+            return remoteSessions.session(key, node);
+        }
     }
 
-    public void dropSession(String nodeName){
-        //TODO 关闭session
+    public LocalModuleSession localSession(String key){
+        return (LocalModuleSession)localSessions.session(key);
+    }
+    public RemoteNSession remoteSession(String key){
+        return (RemoteNSession)remoteSessions.get(key);
     }
 
-
-    NSessionSets(NSocket socket, PropHelper params){
-        this.socket = socket;
-        this.params = params;
-        packIDKey = UUIDGenerator.generate() + ".SID";
-        waitResponsePacks = buildPacketCache();
+    public void dropSession(String nodeName, boolean sendDDNode){
+        RemoteNSession rms = (RemoteNSession)remoteSessions.get(nodeName);
+        if(rms!=null){
+            rms.closeSession(sendDDNode);
+        }
+        else{
+            log.debug("drop unknown session: name={}", nodeName);
+        }
     }
 
     private Cache<String, NPacketTuple> buildPacketCache(){
@@ -100,24 +140,12 @@ public class NSessionSets {
         }
     }
 
-    LocalModuleSession addLocalModule(String module){
-        LocalModuleSession lms = localModules.get(module);
-        if(lms==null){
-            lms = new LocalModuleSession(module);
-            localModules.put(module, lms);
-        }
-        return lms;
+    private boolean isLocalSession(NodeInfo node){
+        return node==null
+                || (StringUtils.equalsIgnoreCase(node.getAddr(), this.self.getNodeInfo().getAddr())
+                   && node.getPort() == this.self.getNodeInfo().getPort())
+                || this.self.getNodeInfo().getNodeName().equals(node.getNodeName());
     }
-
-
-
-
-
-
-
-
-
-
 
 
     String getSimpleJsonInfo(){

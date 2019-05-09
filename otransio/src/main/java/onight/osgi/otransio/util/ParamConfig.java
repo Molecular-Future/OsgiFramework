@@ -10,8 +10,9 @@ public class ParamConfig {
 
     public static final String SOCKET_IMPL_O = "osocket";
     public static final String SOCKET_IMPL_N = "nsocket";
-
     public static final String SOCKET_IMPL = params.get("org.csc.transio.impl", "osocket");
+
+    public static final int NSOCK_THREAD_COUNT = params.get("ntrans.thread.count", 8);
     //TCP 连接参数
     /**
      * tcp 读超时时间，单位毫秒，默认60秒
@@ -70,4 +71,10 @@ public class ParamConfig {
      * 连接未认证超时时间
      */
     public static final int NO_AUTH_TIMEOUT_SEC = params.get("otrans.max.conn.timeout.sec", 30);
+
+    public static final int RECONNECT_TIME_MS = params.get("ntrans.reconnect.ms", 5000);
+
+    public static final int SEND_RETRY_TIMES = params.get("ntrans.retry.times", 3);
+
+    public static final int SEND_RETRY_DELAY_MS = params.get("ntrans.retry.delay.ms", 3000);
 }

@@ -2,16 +2,12 @@ package onight.osgi.otransio.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
-import onight.osgi.otransio.netty.NServer;
-import onight.osgi.otransio.netty.NSocket;
 import onight.osgi.otransio.util.ParamConfig;
 import onight.tfw.mservice.NodeHelper;
-import onight.tfw.outils.conf.PropHelper;
 
 @Slf4j
 public class NServer {

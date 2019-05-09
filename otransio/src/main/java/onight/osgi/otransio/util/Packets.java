@@ -1,5 +1,7 @@
 package onight.osgi.otransio.util;
 
+import io.netty.util.AttributeKey;
+import onight.osgi.otransio.impl.NodeInfo;
 import onight.osgi.otransio.sm.RemoteModuleBean;
 import onight.tfw.otransio.api.PackHeader;
 import onight.tfw.otransio.api.PacketHelper;
@@ -7,8 +9,9 @@ import onight.tfw.otransio.api.beans.FixHeader;
 import onight.tfw.otransio.api.beans.FramePacket;
 
 public final class Packets {
-
     public static final String DROP_CONN = "DROP**";
+    public static final AttributeKey<String> ATTR_AUTH_KEY = AttributeKey.newInstance("ntrans.rns.auth");
+
     /**
      * 创建心跳消息
      * @param nodeName 节点名称
@@ -31,8 +34,13 @@ public final class Packets {
         return hbpack;
     }
 
-    public static FramePacket newLogin(RemoteModuleBean rmb){
-        FramePacket ret = PacketHelper.genSyncPack(PackHeader.REMOTE_LOGIN, PackHeader.REMOTE_MODULE, rmb);
-        return ret;
+    public static FramePacket newLogin(RemoteModuleBean node){
+        FramePacket pack = PacketHelper.genSyncPack(PackHeader.REMOTE_LOGIN, PackHeader.REMOTE_MODULE, node);
+        pack.putHeader(PackHeader.PACK_FROM, node.getNodeInfo().getNodeName());
+        return pack;
+    }
+
+    public static FramePacket newDrop(NodeInfo localInfo){
+        return null;
     }
 }

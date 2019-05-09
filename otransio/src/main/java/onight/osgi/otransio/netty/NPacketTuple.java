@@ -12,6 +12,16 @@ public class NPacketTuple {
     private boolean writed = false;
     private boolean responsed = false;
 
+    public boolean compareAndIncRewriteTImes(int max){
+        if(rewriteTimes>=max){
+            return false;
+        }
+        else {
+            rewriteTimes++;
+            return true;
+        }
+    }
+
     public NPacketTuple(FramePacket packet, CompleteHandler handler){
         this.packet = packet;
         this.handler = handler;

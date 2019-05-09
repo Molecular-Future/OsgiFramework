@@ -5,6 +5,12 @@ import onight.tfw.async.FutureSender;
 import onight.tfw.otransio.api.beans.FramePacket;
 
 public class NTransSender extends FutureSender {
+    private NSocketImpl socket;
+
+    public NTransSender(NSocketImpl socket){
+        this.socket = socket;
+    }
+
     @Override
     public FramePacket send(FramePacket framePacket, long timeoutMs) {
         return null;

@@ -67,7 +67,6 @@ public class NodeInfo {
 			e.printStackTrace();
 			return null;
 		}
-
 	}
 
 }
