@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import lombok.EqualsAndHashCode;
 import org.apache.commons.lang3.StringUtils;
 import org.glassfish.grizzly.CloseListener;
 import org.glassfish.grizzly.Closeable;
@@ -27,6 +28,7 @@ import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.outils.pool.ReusefulLoopPool;
 
 @Data
+@EqualsAndHashCode(callSuper=false)
 @Slf4j
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class CKConnPool extends ReusefulLoopPool<Connection> {

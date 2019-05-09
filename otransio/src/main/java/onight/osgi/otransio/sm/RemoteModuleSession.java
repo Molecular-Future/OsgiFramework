@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
 
+import lombok.EqualsAndHashCode;
 import org.glassfish.grizzly.CloseListener;
 import org.glassfish.grizzly.Closeable;
 import org.glassfish.grizzly.CompletionHandler;
@@ -27,6 +28,7 @@ import onight.tfw.otransio.api.session.PSession;
 
 @Slf4j
 @Data
+@EqualsAndHashCode(callSuper=false)
 @SuppressWarnings("rawtypes")
 public class RemoteModuleSession extends PSession {
 
