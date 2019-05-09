@@ -15,7 +15,7 @@ version = '4.1.0'
 jar {
 	manifest{
 		//		attributes( 'Spring-Context': 'applicationContext-common.xml, applicationContext-beans.xml')
-		attributes( 'Import-Ignore':'org.glassfish.grizzly,jnr.posix')
+		attributes( 'Import-Ignore':'org.glassfish.grizzly,jnr.posix,io.netty')
 		attributes( 'DynamicImport-Package': '*')
 		attributes( 'Import-Lib': 'lib')
 	}

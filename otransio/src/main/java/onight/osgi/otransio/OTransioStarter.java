@@ -42,12 +42,12 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
     public OTransioStarter(BundleContext context) {
         this.context = context;
         params = new PropHelper(context);
-        //TODO select socket impl
+
         if(ParamConfig.SOCKET_IMPL_N.equalsIgnoreCase(ParamConfig.SOCKET_IMPL)){
             //TODO use netty impl
         }
         else{
-            socket = new OSocketImpl(this.context);
+            socket = new OSocketImpl(this.context, params);
             sender = socket.packetSender();
         }
     }

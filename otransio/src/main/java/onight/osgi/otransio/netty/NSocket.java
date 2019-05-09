@@ -2,6 +2,7 @@ package onight.osgi.otransio.netty;
 
 import io.netty.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
+import onight.osgi.otransio.ISocket;
 import onight.osgi.otransio.impl.LocalMessageProcessor;
 import onight.osgi.otransio.impl.NodeInfo;
 import onight.osgi.otransio.impl.SenderPolicy;
@@ -28,15 +29,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-@Component(immediate = true)
-@Instantiate(name = "nsocketimpl")
-@Provides(specifications = { ActorService.class, IActor.class })
 @Slf4j
-public class NSocket implements  ActorService, IActor {
+public class NSocket implements ISocket {
 
-    @ActorRequire(name = "zippo.ddc", scope = "global")
-    IActorDispatcher dispatcher = null;
-
+    private IActorDispatcher dispatcher = null;
     private EventExecutorGroup eeg;
     private BundleContext context;
     private PropHelper params;
@@ -47,7 +43,6 @@ public class NSocket implements  ActorService, IActor {
 
     transient LocalMessageProcessor localProcessor = new LocalMessageProcessor();
 
-
     public NSocket(BundleContext context) {
         this.context = context;
         params = new PropHelper(context);
@@ -57,33 +52,28 @@ public class NSocket implements  ActorService, IActor {
         this.server = new NServer();
     }
 
-    @Validate
-    public void startup(){
-        AtomicBoolean dispatcherReady = new AtomicBoolean(false);
-        AtomicReference<ScheduledFuture> ref = new AtomicReference<>(null);
-        ScheduledFuture sf = eeg.next().scheduleAtFixedRate(()->{
-            if(this.dispatcher==null){
-                return;
-            }
-            if(dispatcherReady.get()){
-                return;
-            }
-            if(dispatcherReady.compareAndSet(false, true)){
-                log.debug("dispatcher is ready, NSocket startup begin.");
-                doInit();
-                log.debug("NSocket startup finished");
-            }
-            if(ref.get()!=null&&!ref.get().isCancelled()){
-                ref.get().cancel(false);
-            }
-        }, 10, 100, TimeUnit.MILLISECONDS);
-        ref.set(sf);
-    }
-
-    private void doInit(){
-//        localProcessor.poolSize = params.get("org.zippo.otransio.maxrunnerbuffer", 1000);
-//        server.startServer(this, this.params);
-    }
+//    @Validate
+//    public void startup(){
+//        AtomicBoolean dispatcherReady = new AtomicBoolean(false);
+//        AtomicReference<ScheduledFuture> ref = new AtomicReference<>(null);
+//        ScheduledFuture sf = eeg.next().scheduleAtFixedRate(()->{
+//            if(this.dispatcher==null){
+//                return;
+//            }
+//            if(dispatcherReady.get()){
+//                return;
+//            }
+//            if(dispatcherReady.compareAndSet(false, true)){
+//                log.debug("dispatcher is ready, NSocket startup begin.");
+//                doInit();
+//                log.debug("NSocket startup finished");
+//            }
+//            if(ref.get()!=null&&!ref.get().isCancelled()){
+//                ref.get().cancel(false);
+//            }
+//        }, 10, 100, TimeUnit.MILLISECONDS);
+//        ref.set(sf);
+//    }
 
     /**
      * 发送消息
@@ -136,25 +126,24 @@ public class NSocket implements  ActorService, IActor {
 
     }
 
+    @Override
+    public IPacketSender packetSender() {
+        return sender;
+    }
 
+    @Override
+    public void start(IActorDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+        server.startServer(this.nss);
+    }
 
-    @Invalidate
-    public void shutdown() {
+    @Override
+    public void stop() {
         log.debug("NSocket stopping");
         server.stop();
     }
 
-    @Bind(aggregate = true, optional = true)
-    public void bindPSender(PSenderService pl) {
-        SenderPolicy.bindPSender(pl, sender);
-    }
-
-    @Unbind(aggregate = true, optional = true)
-    public void unbindPSender(PSenderService pl) {
-        // log.debug("Remove PSender::" + pl);
-    }
-
-    @Bind(aggregate = true, optional = true)
+    @Override
     public void bindCMDService(CMDService service) {
         LocalModuleSession ms = nss.addLocalModule(service.getModule());
         for (String cmd : service.getCmds()) {
@@ -162,44 +151,19 @@ public class NSocket implements  ActorService, IActor {
         }
     }
 
-    @Unbind(aggregate = true, optional = true)
+    @Override
     public void unbindCMDService(CMDService service) {
-        // log.debug("Remove ModuleSession::" + service);
+
     }
 
     @Override
-    public String[] getWebPaths() {
-        return new String[]{"/nio/stat", "/nio/rhr", "/nio/pbrhr", "/nio/pbrhr.do"};
+    public String simpleJsonInfo() {
+        return nss.getSimpleJsonInfo();
     }
 
     @Override
-    public void doGet(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doSomething(httpServletRequest, httpServletResponse);
-    }
-
-    @Override
-    public void doPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doSomething(httpServletRequest, httpServletResponse);
-    }
-
-    @Override
-    public void doPut(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doSomething(httpServletRequest, httpServletResponse);
-    }
-
-    @Override
-    public void doDelete(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doSomething(httpServletRequest, httpServletResponse);
-    }
-
-    public void doSomething(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setCharacterEncoding("UTF-8");
-        resp.setHeader("Content-type", "application/json;charset=UTF-8");
-        if (req.getServletPath().endsWith("rhr") || req.getServletPath().endsWith("pbrhr.do")) {
-            resp.getWriter().write(nss.getSimpleJsonInfo());
-        } else {
-            resp.getWriter().write(nss.getJsonInfo());
-        }
+    public String jsonInfo() {
+        return nss.getJsonInfo();
     }
 
     private boolean isLocalNode(NodeInfo node){

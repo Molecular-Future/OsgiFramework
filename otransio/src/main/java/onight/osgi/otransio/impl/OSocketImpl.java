@@ -69,9 +69,9 @@ public class OSocketImpl implements Serializable, ISocket {
 
 	BundleContext context;
 
-	public OSocketImpl(BundleContext context) {
+	public OSocketImpl(BundleContext context, PropHelper helper) {
 		this.context = context;
-		params = new PropHelper(context);
+		params = helper;
 		mss = new MSessionSets(OSocketImpl.this,params);
 	}
 
