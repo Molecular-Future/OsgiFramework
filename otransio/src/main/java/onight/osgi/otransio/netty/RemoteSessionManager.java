@@ -11,6 +11,13 @@ public class RemoteSessionManager extends PSessionManager<NodeInfo> {
     private NSessionSets nss;
     private EventExecutorGroup eeg;
 
+    public void putIfAbsent(String key, RemoteNSession session){
+        RemoteNSession oldSession = (RemoteNSession)sessions.putIfAbsent(key, session);
+        if(oldSession!=null){
+            oldSession.closeSession(false);
+        }
+    }
+
     @Override
     protected PSession createSession(String key, NodeInfo node) {
         return new RemoteNSession(node, nss, eeg);

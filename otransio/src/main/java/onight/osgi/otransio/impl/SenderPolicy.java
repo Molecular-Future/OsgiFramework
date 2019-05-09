@@ -16,6 +16,7 @@ public class SenderPolicy {
 
 	public static void bindPSender(PSenderService senderClient, IPacketSender sender) {
 		Class clazz = senderClient.getClass();
+		log.debug("senderCLient clazz={}", clazz.getName());
 		for (Field field : clazz.getDeclaredFields()) {
 			PSender anno = field.getAnnotation(PSender.class);
 			if (anno != null && (anno.name().equals("transio"))) {

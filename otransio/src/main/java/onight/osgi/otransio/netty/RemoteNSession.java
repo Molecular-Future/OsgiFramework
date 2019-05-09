@@ -15,10 +15,12 @@ import onight.osgi.otransio.util.ParamConfig;
 import onight.tfw.async.CompleteHandler;
 import onight.tfw.otransio.api.PackHeader;
 import onight.tfw.otransio.api.PacketHelper;
+import onight.tfw.otransio.api.beans.ExtHeader;
 import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.PSession;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -54,6 +56,7 @@ public class RemoteNSession extends PSession {
     private AtomicBoolean connected = new AtomicBoolean(false);
     private volatile boolean isClosed = false;
     private LongAdder qCounter = new LongAdder();
+    private ArrayList<NodeInfo> subNodes = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
     public RemoteNSession(NodeInfo nodeInfo, NSessionSets nss, EventExecutorGroup eeg){
@@ -66,6 +69,9 @@ public class RemoteNSession extends PSession {
         connect();
     }
 
+    public void changeName(String name){
+        nodeInfo.setNodeName(name);
+    }
     private void connect() {
         this.client.connect(nodeInfo.getAddr(), nodeInfo.getPort()).addListener(
                 (ChannelFutureListener) f -> {
@@ -113,11 +119,15 @@ public class RemoteNSession extends PSession {
             else{
                 log.debug("write to channel failed", f.cause());
                 if(pt.compareAndIncRewriteTImes(ParamConfig.SEND_RETRY_TIMES)) {
-                    //未达到重试次数则重新加入待发送队列
                     if(!isClosed) {
                         eeg.schedule(
                                 () -> {
+                                    //未达到重试次数则重新加入待发送队列
                                     pt.setWrited(false);
+                                    nss.removeCachePack(getPacketId(pt));
+                                    String newId = genPackID();
+                                    changePacketId(pt.getPacket(), newId);
+                                    nss.addCachePack(newId, pt);
                                     writeQ.offer(pt);
                                     qCounter.increment();
                                 }, ParamConfig.SEND_RETRY_DELAY_MS, TimeUnit.MILLISECONDS);
@@ -151,24 +161,23 @@ public class RemoteNSession extends PSession {
         return this;
     }
 
-    public RemoteNSession removeChannel(Channel channel){
-        this.channels.remove(channel);
-        return this;
-    }
+//    public RemoteNSession removeChannel(Channel channel){
+//        this.channels.remove(channel);
+//        return this;
+//    }
 
     public void parseUri(String uri){
-        //TODO support sub-nodes
-//        subNodes.clear();
-//        for (String str : uri.split(",")) {
-//            if (!StringUtils.isBlank(str.trim())) {
-//                try {
-//                    NodeInfo newin = NodeInfo.fromURI(str, this.nameid);
-//                    subNodes.add(newin);
-//                } catch (Exception e) {
-//                }
-//            }
-//        }
-
+        subNodes.clear();
+        for (String str : uri.split(",")) {
+            if (!StringUtils.isBlank(str.trim())) {
+                try {
+                    NodeInfo newin = NodeInfo.fromURI(str, this.nodeInfo.getNodeName());
+                    subNodes.add(newin);
+                } catch (Exception e) {
+                    log.debug("add sub nodes error::", e);
+                }
+            }
+        }
     }
 
     public void closeSession(boolean sendDDNode){
@@ -199,11 +208,7 @@ public class RemoteNSession extends PSession {
         NPacketTuple pt = new NPacketTuple(pack, handler);
         if(pack.isSync() && handler!=null){
             packId = genPackID();
-            pack.putHeader(nss.getPackIDKey(), packId);
-            Object to_pack = pack.getExtHead().remove(PackHeader.PACK_TO);
-            if (to_pack != null) {
-                pack.getExtHead().append(PackHeader.PACK_TO + "_D", to_pack);
-            }
+            changePacketId(pack, packId);
             nss.addCachePack(packId, pt);
         }
         Channel ch = nextChannel();
@@ -221,6 +226,21 @@ public class RemoteNSession extends PSession {
             writeQ.offer(pt);
             qCounter.increment();
         }
+    }
+
+    private void changePacketId(FramePacket pack, String packId){
+        ExtHeader extHeader = pack.getExtHead();
+        if(extHeader!=null){
+            extHeader.remove(nss.getPackIDKey());
+        }
+        pack.putHeader(nss.getPackIDKey(), packId);
+        Object to_pack = pack.getExtHead().remove(PackHeader.PACK_TO);
+        if (to_pack != null) {
+            pack.getExtHead().append(PackHeader.PACK_TO + "_D", to_pack);
+        }
+    }
+    private String getPacketId(NPacketTuple pt){
+        return (String)pt.getPacket().getExtHead().get(nss.getPackIDKey());
     }
 
     @Override

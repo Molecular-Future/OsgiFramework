@@ -44,7 +44,7 @@ public class NSessionSets {
         this.dispatcher =dispatcher;
         this.eeg = new DefaultEventExecutorGroup(ParamConfig.NSOCK_THREAD_COUNT);
         this.remoteSessions = new RemoteSessionManager(this, this.eeg);
-        this.localSessions = new LocalModuleManager(this, this.dispatcher);
+        this.localSessions = new LocalModuleManager(this, this.dispatcher, this.eeg);
     }
 
     public String selfNodeName(){
@@ -85,8 +85,25 @@ public class NSessionSets {
     public LocalModuleSession localSession(String key){
         return (LocalModuleSession)localSessions.session(key);
     }
+    public LocalModuleSession getLocalSession(String key){
+        return (LocalModuleSession)localSessions.get(key);
+    }
     public RemoteNSession remoteSession(String key){
         return (RemoteNSession)remoteSessions.get(key);
+    }
+    public void changeRemoteSessionName(String oldName, String newName){
+        if(StringUtils.isBlank(oldName)
+                ||StringUtils.isBlank(newName)
+                ||StringUtils.equalsIgnoreCase(oldName, newName)){
+            return;
+        }
+        synchronized(this){
+            RemoteNSession session = (RemoteNSession)remoteSessions.removeSession(oldName);
+            if(session!=null){
+                session.changeName(newName);
+                remoteSessions.putIfAbsent(newName, session);
+            }
+        }
     }
 
     public void dropSession(String nodeName, boolean sendDDNode){
@@ -97,6 +114,10 @@ public class NSessionSets {
         else{
             log.debug("drop unknown session: name={}", nodeName);
         }
+    }
+
+    public void shutdown(){
+        //TODO nss shutdown
     }
 
     private Cache<String, NPacketTuple> buildPacketCache(){

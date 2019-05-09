@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.impl.OSocketImpl;
 import onight.osgi.otransio.impl.SenderPolicy;
+import onight.osgi.otransio.netty.NSocketImpl;
 import onight.osgi.otransio.util.ParamConfig;
 import onight.tfw.ntrans.api.ActorService;
 import onight.tfw.ntrans.api.annotation.ActorRequire;
@@ -31,8 +32,19 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
 
     private static final long serialVersionUID = -3801574196234562354L;
 
+    private boolean needDispatcher = false;
+
     @ActorRequire(name = "zippo.ddc", scope = "global")
     IActorDispatcher dispatcher = null;
+
+    public IActorDispatcher getDispatcher(){
+        return dispatcher;
+    }
+
+    public void setDispatcher(IActorDispatcher dispatcher){
+        log.debug("set dispatcher: {}", dispatcher);
+        this.dispatcher = dispatcher;
+    }
 
     private BundleContext context;
     private PropHelper params;
@@ -43,40 +55,53 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
         this.context = context;
         params = new PropHelper(context);
 
-        if(ParamConfig.SOCKET_IMPL_N.equalsIgnoreCase(ParamConfig.SOCKET_IMPL)){
-            //TODO use netty impl
+        if(!ParamConfig.SOCKET_IMPL_N.equalsIgnoreCase(ParamConfig.SOCKET_IMPL)){
+            needDispatcher = true;
+            log.debug("OTransioStarter is OSocketImpl");
+            socket = new OSocketImpl(this.context, params);
+            sender = socket.packetSender();
+
         }
         else{
-            socket = new OSocketImpl(this.context, params);
+            log.debug("OTransioStarter is NSocketImpl");
+            socket = new NSocketImpl(this.context);
             sender = socket.packetSender();
         }
     }
 
     @Validate
     public void start() {
+        log.info("OTransioStarter begin starting...");
         new Thread(()->{
-            while (dispatcher == null) {
+            int c = 0;
+            while (dispatcher == null&&needDispatcher) {
                 try{
                     Thread.sleep(50);
+                    c++;
+                    if(c>0&&c%100==0){
+                        log.debug("wait dispatcher....");
+                    }
                 }
                 catch(InterruptedException e){
                     log.warn("thread interrupted.", e);
                 }
             }
-            log.info("transio startup:");
+            log.info("OTransioStarter dispatcher ready, begin socket impl.");
             socket.start(dispatcher);
+            log.info("OTransioStarter socket impl started.");
         }).start();
     }
 
     @Invalidate
     public void stop() {
-        log.debug("nio stoping");
+        log.debug("OTransioStarter begin stoping...");
         socket.stop();
-        log.debug("nio stopped ... OK");
+        log.debug("OTransioStarter stopped ... OK");
     }
 
     @Bind(aggregate = true, optional = true)
     public void bindPSender(PSenderService pl) {
+        log.debug("OTransioStarter bind sender, real class is {}", sender.getClass().getSimpleName());
         SenderPolicy.bindPSender(pl, sender);
     }
 

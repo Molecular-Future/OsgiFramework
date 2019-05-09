@@ -6,7 +6,7 @@ import onight.tfw.otransio.api.session.PSession;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class PSessionManager<V> {
-    private ConcurrentHashMap<String, PSession> sessions = new ConcurrentHashMap<>();
+    protected ConcurrentHashMap<String, PSession> sessions = new ConcurrentHashMap<>();
 
     public PSession session(String key, V object){
         PSession session = sessions.get(key);
