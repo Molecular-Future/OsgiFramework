@@ -4,17 +4,10 @@ import io.netty.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.impl.LocalMessageProcessor;
 import onight.osgi.otransio.impl.NodeInfo;
-import onight.osgi.otransio.impl.OSocketImpl;
 import onight.osgi.otransio.impl.SenderPolicy;
-import onight.osgi.otransio.netty.NServer;
-import onight.osgi.otransio.netty.NSocket;
-import onight.osgi.otransio.netty.impl.NServerImpl;
-import onight.osgi.otransio.sm.MSessionSets;
-import onight.tfw.mservice.NodeHelper;
 import onight.tfw.ntrans.api.ActorService;
 import onight.tfw.ntrans.api.annotation.ActorRequire;
 import onight.tfw.otransio.api.IPacketSender;
-import onight.tfw.otransio.api.PSender;
 import onight.tfw.otransio.api.PSenderService;
 import onight.tfw.otransio.api.PackHeader;
 import onight.tfw.otransio.api.beans.FramePacket;
@@ -31,7 +24,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,8 +33,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @Provides(specifications = { ActorService.class, IActor.class })
 @Slf4j
 public class NSocket implements  ActorService, IActor {
-
-
 
     @ActorRequire(name = "zippo.ddc", scope = "global")
     IActorDispatcher dispatcher = null;
@@ -64,7 +54,7 @@ public class NSocket implements  ActorService, IActor {
         //TODO 需要配置线程数量
         eeg = new DefaultEventExecutorGroup(8);
         this.nss = new NSessionSets(NSocket.this, params);
-        this.server = new NServerImpl();
+        this.server = new NServer();
     }
 
     @Validate
@@ -92,7 +82,7 @@ public class NSocket implements  ActorService, IActor {
 
     private void doInit(){
 //        localProcessor.poolSize = params.get("org.zippo.otransio.maxrunnerbuffer", 1000);
-        server.startServer(this, this.params);
+//        server.startServer(this, this.params);
     }
 
     /**

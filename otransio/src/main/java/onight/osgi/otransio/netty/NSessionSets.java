@@ -22,7 +22,7 @@ import java.util.concurrent.TimeoutException;
 public class NSessionSets {
     NSocket socket;
     PropHelper params;
-    Cache<String, PacketTuple> packsCache;
+    Cache<String, NPacketTuple> waitResponsePacks;
 
     RemoteModuleBean self = new RemoteModuleBean();
 
@@ -37,9 +37,9 @@ public class NSessionSets {
         return self.getNodeInfo().getNodeName();
     }
 
-    public PacketTuple removeCachePack(String packId){
-        PacketTuple pt = packsCache.getIfPresent(packId);
-        packsCache.invalidate(packId);
+    public NPacketTuple removeCachePack(String packId){
+        NPacketTuple pt = waitResponsePacks.getIfPresent(packId);
+        waitResponsePacks.invalidate(packId);
         return pt;
     }
 
@@ -56,10 +56,10 @@ public class NSessionSets {
         this.socket = socket;
         this.params = params;
         packIDKey = UUIDGenerator.generate() + ".SID";
-        packsCache = buildPacketCache();
+        waitResponsePacks = buildPacketCache();
     }
 
-    private Cache<String, PacketTuple> buildPacketCache(){
+    private Cache<String, NPacketTuple> buildPacketCache(){
         return CacheBuilder.newBuilder()
                 .maximumSize(ParamConfig.PACK_CAHCE_MAXSIZE)
                 .expireAfterAccess(ParamConfig.RESEND_TIMEOUT_MS, TimeUnit.MILLISECONDS)

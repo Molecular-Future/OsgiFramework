@@ -5,19 +5,9 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import onight.osgi.otransio.ISocket;
+import onight.tfw.otransio.api.*;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.felix.ipojo.annotations.Bind;
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Instantiate;
-import org.apache.felix.ipojo.annotations.Invalidate;
-import org.apache.felix.ipojo.annotations.Provides;
-import org.apache.felix.ipojo.annotations.Unbind;
-import org.apache.felix.ipojo.annotations.Validate;
-import org.fc.zippo.dispatcher.ForkJoinDispatcher;
 import org.fc.zippo.dispatcher.IActorDispatcher;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.Grizzly;
@@ -40,10 +30,6 @@ import onight.tfw.async.CompleteHandler;
 import onight.tfw.mservice.NodeHelper;
 import onight.tfw.ntrans.api.ActorService;
 import onight.tfw.ntrans.api.annotation.ActorRequire;
-import onight.tfw.otransio.api.MessageException;
-import onight.tfw.otransio.api.PSenderService;
-import onight.tfw.otransio.api.PackHeader;
-import onight.tfw.otransio.api.PacketHelper;
 import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.beans.UnknowModuleBody;
 import onight.tfw.otransio.api.session.CMDService;
@@ -52,11 +38,8 @@ import onight.tfw.otransio.api.session.PSession;
 import onight.tfw.outils.conf.PropHelper;
 import onight.tfw.proxy.IActor;
 
-@Component(immediate = true)
-@Instantiate(name = "osocketimpl")
-@Provides(specifications = { ActorService.class, IActor.class })
 @Slf4j
-public class OSocketImpl implements Serializable, ActorService, IActor {
+public class OSocketImpl implements Serializable, ISocket {
 
 	/**
 	 * 
@@ -75,14 +58,10 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 
 	public static String DROP_CONN = "DROP**";
 
-	@ActorRequire(name = "zippo.ddc", scope = "global")
+	@Getter
 	IActorDispatcher dispatcher = null;
 
-	public IActorDispatcher getDispatcher() {
-		return dispatcher;
-	}
-
-	public void setDispatcher(IActorDispatcher dispatcher) {
+	void setDispatcher(IActorDispatcher dispatcher) {
 		log.info("setDispatcher==" + dispatcher);
 		this.dispatcher = dispatcher;
 		localProcessor.dispatcher = dispatcher;
@@ -119,60 +98,49 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 		return "localhost";
 	}
 
-	@Validate
-	public void start() {
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					while (dispatcher == null) {
-						Thread.sleep(2000);
-					}
-					log.info("transio startup:");
-					osm = new OutgoingSessionManager(OSocketImpl.this, params, mss);
-					mss.setOsm(osm);
-					localProcessor.poolSize = params.get("org.zippo.otransio.maxrunnerbuffer", 1000);
-					server.startServer(OSocketImpl.this, params);
-
-				} catch (InterruptedException e) {
-				}
-				// 建立外联服务
-				osm.init();
-			}
-		}).start();
+	@Override
+	public IPacketSender packetSender(){
+		return sender;
 	}
 
-	@Invalidate
+	@Override
+	public void start(IActorDispatcher dispatcher) {
+		setDispatcher(dispatcher);
+		osm = new OutgoingSessionManager(OSocketImpl.this, params, mss);
+		mss.setOsm(osm);
+		localProcessor.poolSize = params.get("org.zippo.otransio.maxrunnerbuffer", 1000);
+		server.startServer(OSocketImpl.this, params);
+		// 建立外联服务
+		osm.init();
+	}
+
+	@Override
 	public void stop() {
-		log.debug("nio stoping");
 		server.stop();
-		log.debug("nio stopped ... OK");
 	}
 
-	@Bind(aggregate = true, optional = true)
-	public void bindPSender(PSenderService pl) {
-		// log.debug("Register PSender::" + pl + ",sender=" + sender);
-		SenderPolicy.bindPSender(pl, sender);
-	}
-
-	@Unbind(aggregate = true, optional = true)
-	public void unbindPSender(PSenderService pl) {
-		// log.debug("Remove PSender::" + pl);
-	}
-
-	@Bind(aggregate = true, optional = true)
+	@Override
 	public void bindCMDService(CMDService service) {
 		// log.debug("Register CMDService::" + service.getModule());
 		LocalModuleSession ms = mss.addLocalMoudle(service.getModule());
 		for (String cmd : service.getCmds()) {
 			ms.registerService(cmd, service);
 		}
-
 	}
 
-	@Unbind(aggregate = true, optional = true)
+	@Override
 	public void unbindCMDService(CMDService service) {
 		// log.debug("Remove ModuleSession::" + service);
+	}
+
+	@Override
+	public String simpleJsonInfo(){
+		return mss.getSimpleJsonInfo();
+	}
+
+	@Override
+	public String jsonInfo(){
+		return mss.getJsonInfo();
 	}
 
 	public void onPacket(FramePacket pack, final CompleteHandler handler, Connection<?> conn) throws TransIOException {
@@ -356,41 +324,6 @@ public class OSocketImpl implements Serializable, ActorService, IActor {
 			log.debug("renameSession:" + oldname + "==>" + newname);
 			mss.renameSession(oldname, newname);
 		}
-	}
-
-	@Override
-	public void doDelete(HttpServletRequest arg0, HttpServletResponse arg1) throws ServletException, IOException {
-		doSomething(arg0, arg1);
-	}
-
-	@Override
-	public void doGet(HttpServletRequest arg0, HttpServletResponse arg1) throws ServletException, IOException {
-		doSomething(arg0, arg1);
-	}
-
-	@Override
-	public void doPost(HttpServletRequest arg0, HttpServletResponse arg1) throws ServletException, IOException {
-		doSomething(arg0, arg1);
-	}
-
-	@Override
-	public void doPut(HttpServletRequest arg0, HttpServletResponse arg1) throws ServletException, IOException {
-		doSomething(arg0, arg1);
-	}
-
-	public void doSomething(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		resp.setCharacterEncoding("UTF-8");
-		resp.setHeader("Content-type", "application/json;charset=UTF-8");
-		if (req.getServletPath().endsWith("rhr") || req.getServletPath().endsWith("pbrhr.do")) {
-			resp.getWriter().write(mss.getSimpleJsonInfo());
-		} else {
-			resp.getWriter().write(mss.getJsonInfo());
-		}
-	}
-
-	@Override
-	public String[] getWebPaths() {
-		return new String[] { "/nio/stat", "/nio/rhr", "/nio/pbrhr", "/nio/pbrhr.do" };
 	}
 
 	public static String getPackTimeout(String key) {

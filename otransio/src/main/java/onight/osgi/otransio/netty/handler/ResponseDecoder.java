@@ -4,6 +4,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import lombok.extern.slf4j.Slf4j;
+import onight.osgi.otransio.netty.NPacketTuple;
 import onight.osgi.otransio.netty.NSessionSets;
 import onight.osgi.otransio.nio.PacketTuple;
 import onight.tfw.otransio.api.beans.FramePacket;
@@ -26,7 +27,7 @@ public class ResponseDecoder extends MessageToMessageDecoder<FramePacket> {
             if(msg.getExtHead().isExist(nss.getPackIDKey())){
                 //通过packId获取缓存的请求报文
                 String packId = msg.getExtStrProp(nss.getPackIDKey());
-                PacketTuple pt = nss.removeCachePack(packId);
+                NPacketTuple pt = nss.removeCachePack(packId);
                 if(pt!=null){
                     //如果有CompleteHandler，则触发完成事件
                     if(pt.getHandler()!=null){

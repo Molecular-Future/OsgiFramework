@@ -14,8 +14,9 @@ public class HeartBeatHandler extends IdleStateHandler {
 
     private NSessionSets nss;
 
-    public HeartBeatHandler(NSessionSets nss, int readerIdleTimeSeconds, int writerIdleTimeSeconds, int allIdleTimeSeconds) {
-        super(readerIdleTimeSeconds, writerIdleTimeSeconds, allIdleTimeSeconds);
+    public HeartBeatHandler(NSessionSets nss, int idleTimeSeconds) {
+        //TODO 现在仅当端口在idleTimeSeconds秒内既没有读也没有写时才发送Heartbeat
+        super(0, 0, idleTimeSeconds);
         this.nss = nss;
     }
 
@@ -34,7 +35,7 @@ public class HeartBeatHandler extends IdleStateHandler {
         if(msg instanceof FramePacket){
             FramePacket fp = (FramePacket)msg;
             if(PackHeader.CMD_HB.equals(fp.getModuleAndCMD())){
-                //处理心跳消息
+                //TODO 处理心跳消息
                 if(log.isTraceEnabled()){
                     log.trace("[HB] From {} to {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
                 }

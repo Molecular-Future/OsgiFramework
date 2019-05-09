@@ -8,6 +8,44 @@ public class ParamConfig {
 
     private static final PropHelper params = new PropHelper(null);
 
+    public static final String SOCKET_IMPL_O = "osocket";
+    public static final String SOCKET_IMPL_N = "nsocket";
+
+    public static final String SOCKET_IMPL = params.get("org.csc.transio.impl", "osocket");
+    //TCP 连接参数
+    /**
+     * tcp 读超时时间，单位毫秒，默认60秒
+     */
+    public static final int TCP_SOTIMEOUT = params.get("ntrans.tcp.sotimeout", 60*1000);
+    /**
+     * tcp 连接超时时间，单位毫秒，默认10秒
+     */
+    public static final int TCP_CONNECT_TIMEOUT = params.get("ntrans.tcp.connect.timeout", 10*1000);
+    /**
+     * tcp keep-alive，默认为 true
+     */
+    public static final boolean TCP_KEEPALIVE = "true".equalsIgnoreCase(params.get("ntrans.tcp.keepalive", "true"));
+    /**
+     * tcp no-delay，默认为 true
+     */
+    public static final boolean TCP_NODELAY = "true".equalsIgnoreCase(params.get("ntrans.tcp.nodelay", "true"));
+    /**
+     * 服务的parent线程数，默认为 0（使用Netty默认配置）
+     */
+    public static final int SERVER_PARENT_THREAD_COUNT = params.get("ntrans.server.parent", 0);
+    /**
+     * 服务的children线程数，默认为 0（使用Netty默认配置）
+     */
+    public static final int SERVER_CHILDREN_THREAD_COUNT = params.get("ntrans.server.children", 0);
+    /**
+     * 客户端的线程数，默认为 0（使用Netty默认配置）
+     */
+    public static final int CLIENT_THREAD_COUNT = params.get("ntrans.client.thread.count", 0);
+    /**
+     * 客户端的线程是否共享，默认为 false
+     */
+    public static final boolean CLIENT_THREAD_SHARED = "true".equalsIgnoreCase(params.get("ntrans.client.thread.shared", "false"));
+
     /**
      * 心跳时间间隔，单位秒，默认30，最小5
      */
