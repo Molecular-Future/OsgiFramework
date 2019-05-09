@@ -66,11 +66,8 @@ public class RemoteNSession extends PSession {
             if (to_pack != null) {
                 pack.getExtHead().append(PackHeader.PACK_TO + "_D", to_pack);
             }
-            //TODO 发送消息时，如果为sync的，则需要缓存起来等待返回
-//            nss.waitResponsePacks.put(packId,
-//                    new PacketTuple(pack, handler,
-//                            false, 0, -1,
-//                            false, null));
+            nss.waitResponsePacks.put(packId,
+                    new NPacketTuple(pack, handler));
         }
 
         Channel ch = nextChannel();
