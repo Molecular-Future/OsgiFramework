@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 public class NTransSender extends FutureSender {
 
-    private NSocketImpl socket;
+    private NSessionSets nss;
 
     @Override
     public FramePacket send(FramePacket framePacket, long timeoutMS) {
@@ -76,20 +76,20 @@ public class NTransSender extends FutureSender {
 
     @Override
     public void tryDropConnection(String nodeName) {
-        if(socket.nss==null){
+        if(nss.notReady()){
             log.error("tryDropConnection failed: nss not ready.");
             return;
         }
-        socket.nss.dropSession(nodeName, true);
+        nss.dropSession(nodeName, true);
     }
 
     @Override
     public void setDestURI(String nodeName, String uri) {
-        if(socket.nss==null){
+        if(nss.notReady()){
             log.error("setDestURI failed: nss not ready.");
             return;
         }
-        RemoteNSession session = socket.nss.remoteSession(nodeName);
+        RemoteNSession session = nss.getRemoteSession(nodeName);
         if(session!=null){
             session.parseUri(uri);
         }
@@ -97,9 +97,9 @@ public class NTransSender extends FutureSender {
 
     @Override
     public void setCurrentNodeName(String s) {
-        if(socket.nss==null){
+        if(nss.notReady()){
             log.error("setDestURI failed: nss not ready.");
-            while(socket.nss==null){
+            while(nss.notReady()){
                 try {
                     Thread.sleep(50);
                 }
@@ -111,8 +111,8 @@ public class NTransSender extends FutureSender {
             }
         }
 
-        if(socket.nss!=null){
-            socket.nss.changeSelfNodeName(s);
+        if(!nss.notReady()){
+            nss.changeSelfNodeName(s);
         }
         else{
             throw new MessageException("nss not ready and Thread interrupted!!!");
@@ -121,18 +121,18 @@ public class NTransSender extends FutureSender {
 
     @Override
     public void changeNodeName(String oldName, String newName) {
-        if(socket.nss==null){
+        if(nss.notReady()){
             log.error("changeNodeName nss not ready.");
             return;
         }
-        socket.nss.changeRemoteSessionName(oldName, newName);
+        nss.changeRemoteSessionName(oldName, newName);
     }
 
 
     private Promise<FramePacket> sendToSession(FramePacket pack){
-        final Promise<FramePacket> promise = socket.nss.newPromise();
+        final Promise<FramePacket> promise = nss.newPromise();
 
-        if(socket.nss==null){
+        if(nss.notReady()){
             log.error("sendToSession nss not ready");
             promise.tryFailure(new PackException("nss not ready."));
             return promise;
@@ -149,7 +149,7 @@ public class NTransSender extends FutureSender {
             node = NodeInfo.fromURI(uri, destTo);
         }
 
-        PSession ms = socket.nss.session(destTo, node);
+        PSession ms = nss.session(destTo, node);
 
         if(ms!=null){
             //生成待发送数据

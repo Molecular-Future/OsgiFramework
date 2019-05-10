@@ -44,7 +44,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
                             vpacket.putHeader(PackHeader.PACK_TO, packfrom);
                             vpacket.getFixHead().setSync(false);
                             vpacket.getFixHead().setResp(true);
-                            RemoteNSession session = nss.remoteSession(packfrom);
+                            RemoteNSession session = nss.getRemoteSession(packfrom);
                             if (session != null) {
                                 session.onPacket(vpacket, null);
                             } else {

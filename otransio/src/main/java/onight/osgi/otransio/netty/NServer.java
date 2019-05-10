@@ -27,9 +27,10 @@ public class NServer {
                 .group(parentGroup, childGroup)
                 .channel(NioServerSocketChannel.class)
         .childHandler(new NChanneIniter(nss));
-
+        log.debug("begin bind port : {}", port);
         bootstrap.bind(port).addListener(
                 (ChannelFutureListener)f->log.debug("netty server started on {}",f.channel().localAddress()));
+        log.debug("end bind port : {}", port);
     }
 
 

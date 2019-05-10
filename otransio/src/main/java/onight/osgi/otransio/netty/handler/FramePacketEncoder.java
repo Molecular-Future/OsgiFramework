@@ -3,8 +3,10 @@ package onight.osgi.otransio.netty.handler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import lombok.extern.slf4j.Slf4j;
 import onight.tfw.otransio.api.beans.FramePacket;
 
+@Slf4j
 public class FramePacketEncoder extends MessageToByteEncoder<FramePacket> {
     private static final String LOG_TIME_SENT = "T__LOG_SENT";
     @Override
@@ -31,6 +33,14 @@ public class FramePacketEncoder extends MessageToByteEncoder<FramePacket> {
         }
         if(body.length>0){
             out.writeBytes(ext);
+        }
+
+        //for debug
+        if(log.isDebugEnabled()){
+            log.debug("netty trans send gcmd:{}{},bodysize {},sent@{},resp={},sync={},prio={}",
+                    msg.getFixHead().getCmd(), msg.getFixHead().getModule(),
+                    msg.getFixHead().getBodysize(), senttime, msg.getFixHead().isResp(),
+                    msg.getFixHead().isSync(),msg.getFixHead().getPrio());
         }
     }
 }

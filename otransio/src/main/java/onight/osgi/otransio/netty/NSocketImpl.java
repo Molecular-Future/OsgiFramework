@@ -1,59 +1,34 @@
 package onight.osgi.otransio.netty;
 
-import io.netty.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.ISocket;
-import onight.osgi.otransio.exception.NoneServerException;
-import onight.osgi.otransio.exception.PackException;
-import onight.osgi.otransio.exception.TransIOException;
-import onight.osgi.otransio.impl.LocalMessageProcessor;
-import onight.osgi.otransio.impl.NodeInfo;
-import onight.osgi.otransio.util.ParamConfig;
-import onight.tfw.async.CallBack;
-import onight.tfw.async.CompleteHandler;
-import onight.tfw.async.FutureSender;
 import onight.tfw.otransio.api.IPacketSender;
-import onight.tfw.otransio.api.MessageException;
-import onight.tfw.otransio.api.PackHeader;
-import onight.tfw.otransio.api.PacketHelper;
-import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.CMDService;
 import onight.tfw.otransio.api.session.LocalModuleSession;
-import onight.tfw.otransio.api.session.PSession;
-import onight.tfw.outils.conf.PropHelper;
-import org.apache.commons.lang3.StringUtils;
 import org.fc.zippo.dispatcher.IActorDispatcher;
-import org.osgi.framework.BundleContext;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class NSocketImpl implements ISocket {
 
-    private volatile IActorDispatcher dispatcher = null;
-    private BundleContext context;
     private NServer server;
     volatile NSessionSets nss;
-    private NTransSender sender = new NTransSender(NSocketImpl.this);
+    private IPacketSender sender;
 
-    public NSocketImpl(BundleContext context) {
-        this.context = context;
+    public NSocketImpl() {
         this.server = new NServer();
+        this.nss = new NSessionSets(this);
+        this.sender = new NTransSender(this.nss);
     }
 
     @Override
     public IPacketSender packetSender() {
-        return sender;
+        return this.sender;
     }
 
     @Override
     public void start(IActorDispatcher dispatcher) {
         log.debug("NSocket starting");
-        this.dispatcher = dispatcher;
-        this.nss = new NSessionSets(NSocketImpl.this, this.dispatcher);
-
+        this.nss.setDispatcher(dispatcher);
         server.startServer(this.nss);
     }
 

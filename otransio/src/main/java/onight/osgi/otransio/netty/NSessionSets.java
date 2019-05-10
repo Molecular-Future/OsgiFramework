@@ -27,7 +27,7 @@ import java.util.concurrent.TimeoutException;
 public class NSessionSets {
     private NSocketImpl socket;
     private Cache<String, NPacketTuple> waitResponsePacks;
-    private IActorDispatcher dispatcher;
+    private volatile IActorDispatcher dispatcher = null;
     private EventExecutorGroup eeg;
     private LocalModuleManager localSessions;
     private RemoteSessionManager remoteSessions;
@@ -37,14 +37,20 @@ public class NSessionSets {
     @Getter
     private RemoteModuleBean self = new RemoteModuleBean();
 
-    NSessionSets(NSocketImpl socket, IActorDispatcher dispatcher){
+    NSessionSets(NSocketImpl socket){
         this.socket = socket;
         this.packIDKey = UUIDGenerator.generate() + ".SID";
         this.waitResponsePacks = buildPacketCache();
-        this.dispatcher =dispatcher;
         this.eeg = new DefaultEventExecutorGroup(ParamConfig.NSOCK_THREAD_COUNT);
         this.remoteSessions = new RemoteSessionManager(this, this.eeg);
         this.localSessions = new LocalModuleManager(this, this.dispatcher, this.eeg);
+    }
+
+    void setDispatcher(IActorDispatcher dispatcher){
+        this.dispatcher = dispatcher;
+    }
+    public boolean notReady(){
+        return this.dispatcher==null;
     }
 
     public String selfNodeName(){
@@ -88,7 +94,7 @@ public class NSessionSets {
     public LocalModuleSession getLocalSession(String key){
         return (LocalModuleSession)localSessions.get(key);
     }
-    public RemoteNSession remoteSession(String key){
+    public RemoteNSession getRemoteSession(String key){
         return (RemoteNSession)remoteSessions.get(key);
     }
     public void changeRemoteSessionName(String oldName, String newName){
@@ -128,7 +134,7 @@ public class NSessionSets {
                     if(rmv.wasEvicted()){
                         //处理超时的请求
                         String key = (String)rmv.getKey();
-                        PacketTuple pt = (PacketTuple)rmv.getValue();
+                        NPacketTuple pt = (NPacketTuple)rmv.getValue();
                         if(pt == null || pt.getHandler() == null){
                             return;
                         }
@@ -140,17 +146,16 @@ public class NSessionSets {
                 })
                 .build();
     }
-    private void logTimeoutPacket(String key, PacketTuple pt) {
+    private void logTimeoutPacket(String key, NPacketTuple pt) {
         try {
             String times[] = key.split("_");
             if (times.length > 2) {
                 long startTime = Long.parseLong(times[times.length - 2]);
                 long duration = System.currentTimeMillis() - startTime;
-                if (pt != null && pt.getPackQ() != null) {
+                if (pt != null) {
                     log.debug("remove timeout sync pack:" + key + ",past["
                             + (System.currentTimeMillis() - startTime) + "]" + ",pt,name="
-                            + pt.getPackQ().getName() + ",pt.uri=" + pt.getPackQ().getCkpool().getIp() + ":"
-                            + pt.getPackQ().getCkpool().getPort() + ",handler==" + pt.getHandler());
+                            + ",handler==" + pt.getHandler());
                 } else {
                     log.debug("remove timeout sync pack:" + key + ",past["
                             + (System.currentTimeMillis() - startTime) + "]" + ",pt is null=");

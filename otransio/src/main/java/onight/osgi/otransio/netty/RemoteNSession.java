@@ -9,7 +9,6 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.exception.TransIOException;
 import onight.osgi.otransio.impl.NodeInfo;
-import onight.osgi.otransio.nio.PacketTuple;
 import onight.osgi.otransio.util.Packets;
 import onight.osgi.otransio.util.ParamConfig;
 import onight.tfw.async.CompleteHandler;
@@ -23,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,12 +35,7 @@ public class RemoteNSession extends PSession {
 
     private final TransIOException CLOSED_EX = new TransIOException("session closed.");
 
-    private static Comparator<PacketTuple> fpComparator = new Comparator<PacketTuple>() {
-        @Override
-        public int compare(PacketTuple o1, PacketTuple o2) {
-            return o1.getPack().getFixHead().getPrio()-o2.getPack().getFixHead().getPrio();
-        }
-    };
+    private static Comparator<NPacketTuple> fpComparator = Comparator.comparingInt(o -> o.getPacket().getFixHead().getPrio());
     private final String rand = "r_" + String.format("%05d", (int) (Math.random() * 100000)) + "_";
     private AtomicLong idCounter = new AtomicLong(0);
     private String genPackID() {
@@ -66,6 +61,7 @@ public class RemoteNSession extends PSession {
         this.channels = new DefaultChannelGroup(nodeInfo.getNodeName(), eeg.next());
         this.writeQ = new PriorityBlockingQueue(100, RemoteNSession.fpComparator);
         this.client = new NClient(this.nss);
+
         connect();
     }
 
@@ -248,24 +244,34 @@ public class RemoteNSession extends PSession {
         return "RemoteNSession(" + nodeInfo.getNodeName() + ")";
     }
 
-    private Channel nextChannel(){
+    private Channel nextChannel() {
         Iterator<Channel> it = channelItRef.get();
-        if(it==null){
+        Channel ch = null;
+        if (it == null) {
             it = this.channels.iterator();
             boolean ret = channelItRef.compareAndSet(null, it);
-            if(!ret){
+            if (!ret) {
                 it = channelItRef.get();
             }
         }
-        Channel ch = it.next();
-        if(ch==null||!ch.isActive()){
-            it = this.channels.iterator();
-            channelItRef.set(it);
-        }
-        else{
+        if (channels.size() == 0) {
             return ch;
         }
-        ch = it.next();
+        try {
+            ch = it.next();
+            if (ch == null || !ch.isActive()) {
+                it = this.channels.iterator();
+                channelItRef.set(it);
+            } else {
+                return ch;
+            }
+            ch = it.next();
+
+        }
+        catch(NoSuchElementException e){
+            ch = null;
+        }
+
         return ch;
     }
 }

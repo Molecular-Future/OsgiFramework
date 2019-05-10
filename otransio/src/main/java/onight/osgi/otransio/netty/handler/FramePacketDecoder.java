@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.slf4j.Slf4j;
+import onight.osgi.otransio.util.Packets;
 import onight.tfw.otransio.api.MessageException;
 import onight.tfw.otransio.api.beans.ExtHeader;
 import onight.tfw.otransio.api.beans.FixHeader;
@@ -16,6 +17,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
 
     private static final byte[] EMPTY_BYTES = new byte[0];
     private static final ExtHeader EMPTY_EXT_HEADER = new ExtHeader();
+
 
     private FixHeader header = null;
     private ExtHeader extHeader = null;
@@ -95,6 +97,16 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
         //返回解析好的消息
         FramePacket fp = new FramePacket(header, extHeader, body, header.getCmd() + header.getModule());
         out.add(fp);
+
+        //for debug
+        if(log.isDebugEnabled()){
+            String sendtime = (String) fp.getExtHead().get(Packets.LOG_TIME_SENT);
+            log.debug("netty trans recv gcmd:{}{},bodysize:{},cost:{} ms,sent={},resp={},sync={},pio={}",
+                    header.getCmd(), header.getModule(),
+                    header.getBodysize(),
+                    (System.currentTimeMillis() - Long.parseLong(sendtime)), sendtime, header.isResp(),
+                    header.isSync(), header.getPrio());
+        }
 
         //重置状态
         header = null;

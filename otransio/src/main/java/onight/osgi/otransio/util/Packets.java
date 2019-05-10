@@ -10,6 +10,7 @@ import onight.tfw.otransio.api.beans.FramePacket;
 
 public final class Packets {
     public static final String DROP_CONN = "DROP**";
+    public static final String LOG_TIME_SENT = "T__LOG_SENT";
     public static final AttributeKey<String> ATTR_AUTH_KEY = AttributeKey.newInstance("ntrans.rns.auth");
 
     /**

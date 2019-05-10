@@ -9,6 +9,7 @@ import onight.osgi.otransio.util.ParamConfig;
 import onight.tfw.ntrans.api.ActorService;
 import onight.tfw.ntrans.api.annotation.ActorRequire;
 import onight.tfw.otransio.api.IPacketSender;
+import onight.tfw.otransio.api.NonePackSender;
 import onight.tfw.otransio.api.PSenderService;
 import onight.tfw.otransio.api.session.CMDService;
 import onight.tfw.outils.conf.PropHelper;
@@ -32,8 +33,6 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
 
     private static final long serialVersionUID = -3801574196234562354L;
 
-    private boolean needDispatcher = false;
-
     @ActorRequire(name = "zippo.ddc", scope = "global")
     IActorDispatcher dispatcher = null;
 
@@ -56,17 +55,15 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
         params = new PropHelper(context);
 
         if(!ParamConfig.SOCKET_IMPL_N.equalsIgnoreCase(ParamConfig.SOCKET_IMPL)){
-            needDispatcher = true;
             log.debug("OTransioStarter is OSocketImpl");
             socket = new OSocketImpl(this.context, params);
-            sender = socket.packetSender();
-
         }
         else{
             log.debug("OTransioStarter is NSocketImpl");
-            socket = new NSocketImpl(this.context);
-            sender = socket.packetSender();
+            socket = new NSocketImpl();
+//            socket = new NoneSocketImpl();
         }
+        sender = socket.packetSender();
     }
 
     @Validate
@@ -74,7 +71,7 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
         log.info("OTransioStarter begin starting...");
         new Thread(()->{
             int c = 0;
-            while (dispatcher == null&&needDispatcher) {
+            while (dispatcher == null) {
                 try{
                     Thread.sleep(50);
                     c++;
@@ -101,7 +98,7 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
 
     @Bind(aggregate = true, optional = true)
     public void bindPSender(PSenderService pl) {
-        log.debug("OTransioStarter bind sender, real class is {}", sender.getClass().getSimpleName());
+//        log.debug("OTransioStarter bind sender, real class is {}", sender.getClass().getSimpleName());
         SenderPolicy.bindPSender(pl, sender);
     }
 
@@ -153,6 +150,47 @@ public class OTransioStarter implements Serializable, ActorService, IActor {
             resp.getWriter().write(socket.simpleJsonInfo());
         } else {
             resp.getWriter().write(socket.jsonInfo());
+        }
+    }
+
+
+
+    public static class NoneSocketImpl  implements ISocket{
+
+        NonePackSender sender = new NonePackSender();
+        @Override
+        public IPacketSender packetSender() {
+            return sender;
+        }
+
+        @Override
+        public void start(IActorDispatcher dispatcher) {
+            log.debug("start server");
+        }
+
+        @Override
+        public void stop() {
+            log.debug("stop server");
+        }
+
+        @Override
+        public void bindCMDService(CMDService service) {
+            log.debug("bind new cmd service. module= {}", service.getModule());
+        }
+
+        @Override
+        public void unbindCMDService(CMDService service) {
+            log.debug("un-bind cmd service, module={}", service.getModule());
+        }
+
+        @Override
+        public String simpleJsonInfo() {
+            return "{}";
+        }
+
+        @Override
+        public String jsonInfo() {
+            return "{}";
         }
     }
 }
