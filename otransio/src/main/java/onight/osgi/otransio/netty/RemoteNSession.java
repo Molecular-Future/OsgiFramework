@@ -1,8 +1,11 @@
 package onight.osgi.otransio.netty;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -19,12 +22,8 @@ import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.PSession;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,10 +33,11 @@ import java.util.concurrent.atomic.LongAdder;
 public class RemoteNSession extends PSession {
 
     private final TransIOException CLOSED_EX = new TransIOException("session closed.");
-
+    private static final Integer DEF_V = 1;
     private static Comparator<NPacketTuple> fpComparator = Comparator.comparingInt(o -> o.getPacket().getFixHead().getPrio());
     private final String rand = "r_" + String.format("%05d", (int) (Math.random() * 100000)) + "_";
     private AtomicLong idCounter = new AtomicLong(0);
+    private LongAdder idxAdder = new LongAdder();
     private String genPackID() {
         return rand + "_" + System.currentTimeMillis() + "_" + idCounter.incrementAndGet();
     }
@@ -52,6 +52,7 @@ public class RemoteNSession extends PSession {
     private volatile boolean isClosed = false;
     private LongAdder qCounter = new LongAdder();
     private ArrayList<NodeInfo> subNodes = new ArrayList<>();
+//    private ConcurrentMap<ChannelId, Integer> activeChannels = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public RemoteNSession(NodeInfo nodeInfo, NSessionSets nss, EventExecutorGroup eeg){
@@ -61,6 +62,9 @@ public class RemoteNSession extends PSession {
         this.channels = new DefaultChannelGroup(nodeInfo.getNodeName(), eeg.next());
         this.writeQ = new PriorityBlockingQueue(100, RemoteNSession.fpComparator);
         this.client = new NClient(this.nss);
+//        this.channels.newCloseFuture().addListener((ChannelGroupFuture) l->{
+//            activeChannels.remove(l..id());
+//        });
 
         this.eeg.scheduleAtFixedRate(()->{
             if(isClosed||channels.size()>0){
@@ -68,6 +72,15 @@ public class RemoteNSession extends PSession {
             }
             connect();
         }, 0, ParamConfig.RECONNECT_TIME_MS, TimeUnit.MILLISECONDS);
+        this.eeg.scheduleWithFixedDelay(()->{
+            if(isClosed||channels.size()==0){
+                return;
+            }
+            Channel ch = nextChannel();
+            if(ch!=null){
+                flushWriteQ(ch);
+            }
+        }, 10, 10, TimeUnit.MILLISECONDS);
     }
 
     public void changeName(String name){
@@ -87,7 +100,9 @@ public class RemoteNSession extends PSession {
                             //发送登录消息
                             ch.attr(Packets.ATTR_AUTH_KEY).set(nss.selfNodeName());
                             ch.writeAndFlush(Packets.newLogin(nss.getSelf()));
+//                            activeChannels.put(f.channel().id(), DEF_V);
                             channels.add(f.channel());
+
 
                             eeg.submit(() -> flushWriteQ(f.channel()));
                         } else {
@@ -101,8 +116,8 @@ public class RemoteNSession extends PSession {
     }
 
     private void flushWriteQ(Channel ch){
-        if(isClosed||ch==null){
-            log.debug("rns state invalid");
+        if(isClosed||ch==null||writeQ.size()==0){
+//            log.debug("rns state invalid");
             return;
         }
         log.debug("do flush write q, size:{}",writeQ.size());
@@ -174,6 +189,7 @@ public class RemoteNSession extends PSession {
 
     public RemoteNSession addChannel(Channel channel){
         log.debug("add to session, node:{}, ch:{}",nodeInfo, channel);
+//        activeChannels.put(channel.id(), DEF_V);
         this.channels.add(channel);
         return this;
     }
@@ -252,7 +268,6 @@ public class RemoteNSession extends PSession {
                     nodeInfo, pt.getPacket().getModule(), pt.getPacket().getCMD(), getPacketId(pt));
             writeQ.offer(pt);
             qCounter.increment();
-            eeg.submit(()->flushWriteQ(ch));
         }
     }
 
@@ -277,34 +292,16 @@ public class RemoteNSession extends PSession {
     }
 
     private Channel nextChannel() {
-        Iterator<Channel> it = channelItRef.get();
-        Channel ch = null;
-        if (it == null) {
-            it = this.channels.iterator();
-            boolean ret = channelItRef.compareAndSet(null, it);
-            if (!ret) {
-                it = channelItRef.get();
-            }
-        }
-        if (channels.size() == 0) {
-            return ch;
-        }
+
         try {
-            ch = it.next();
-            if (ch == null || !ch.isActive()) {
-                it = this.channels.iterator();
-                channelItRef.set(it);
-            } else {
+            Channel ch = channels.iterator().next();
+            if (ch != null && ch.isActive()) {
                 return ch;
             }
-            ch = it.next();
-
+        } catch (Exception e) {
+            log.debug("get channel ex:{}", e.getMessage());
         }
-        catch(NoSuchElementException e){
-            ch = null;
-        }
-
-        return ch;
+        return null;
     }
 
 
@@ -320,17 +317,15 @@ public class RemoteNSession extends PSession {
         if(sz>0) {
             sb.append(",\"channels\":[");
             int i = 0;
-            Iterator<Channel> it = channels.iterator();
-            while (it.hasNext()) {
-                Channel ch = it.next();
-                if(ch!=null){
-                    if(i>0){
+            for (Channel ch : channels) {
+                if (ch != null) {
+                    if (i > 0) {
                         sb.append(",");
                     }
                     i++;
                     sb.append("{");
-                    sb.append(",\"id\":\"").append(ch.id()).append("\"");
-                    sb.append("\"local\":\"").append(ch.localAddress()).append("\"");
+                    sb.append("\"id\":\"").append(ch.id()).append("\"");
+                    sb.append(",\"local\":\"").append(ch.localAddress()).append("\"");
                     sb.append(",\"remote\":\"").append(ch.remoteAddress()).append("\"");
                     sb.append(",\"isOpen\":\"").append(ch.isOpen()).append("\"");
                     sb.append("}");

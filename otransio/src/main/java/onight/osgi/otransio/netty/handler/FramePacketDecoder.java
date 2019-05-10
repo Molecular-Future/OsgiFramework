@@ -107,11 +107,11 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
         //for debug
         if(log.isDebugEnabled()){
             String sendtime = (String) fp.getExtHead().get(Packets.LOG_TIME_SENT);
-            log.debug("netty trans recv gcmd:{}{},bodysize:{},extsize:{}, cost:{} ms,sent={},resp={},sync={},pio={}",
+            log.debug("netty trans recv gcmd:{}{},bodysize:{},extsize:{}, cost:{} ms,sent={},resp={},sync={},pio={},vkvs={}",
                     header.getCmd(), header.getModule(),
                     header.getBodysize(), header.getExtsize(),
                     (System.currentTimeMillis() - Long.parseLong(sendtime)), sendtime, header.isResp(),
-                    header.isSync(), header.getPrio());
+                    header.isSync(), header.getPrio(),fp.getExtHead().getVkvs());
         }
 
         //重置状态

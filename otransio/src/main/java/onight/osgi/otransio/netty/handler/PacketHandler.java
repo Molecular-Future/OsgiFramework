@@ -21,7 +21,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FramePacket pack) throws Exception {
         CompleteHandler handler = null;
-        log.debug("receive request pack, id:{}", pack.getExtHead());
+        log.debug("receive request pack, vkvs={}, gcmd={}",
+                pack.getExtHead().getVkvs(), pack.getModuleAndCMD());
         if (pack.isSync()) {
 
             final String packfrom = pack.getExtStrProp(PackHeader.PACK_FROM);
@@ -34,17 +35,16 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
                     vpacket.getFixHead().setResp(true);
                     try {
                         if (ctx.channel().isWritable()) {
-                            log.debug("sync message response to conn=" + ctx.channel() + ",bcuid=" + packfrom + ",packgcmd="
-                                    + vpacket.getModuleAndCMD() + "/" + pack.getModuleAndCMD());
+                            log.debug("sync message response to vkvs={}, conn={},bcuid={},gcmd={}",
+                                    vpacket.getExtHead().getVkvs(), ctx.channel(), packfrom, vpacket.getModuleAndCMD());
                             vpacket.putHeader(PackHeader.PACK_FROM, nss.selfNodeName());
-                            ctx.channel().write(vpacket);
+                            ctx.channel().writeAndFlush(vpacket);
                         } else {
-                            log.error("sync message response to new conn=" + ctx.channel() + ",bcuid=" + packfrom + ",packgcmd="
-                                    + vpacket.getModuleAndCMD() + "/" + pack.getModuleAndCMD());
+                            log.error("sync message response to new vkvs={}, conn={},,bcuid={},packgcmd={}",
+                                    vpacket.getExtHead().getVkvs(), ctx.channel(), packfrom + vpacket.getModuleAndCMD());
                             // log.debug("get Pack callback from :" + packfrom);
                             vpacket.putHeader(PackHeader.PACK_TO, packfrom);
                             vpacket.getFixHead().setSync(false);
-                            vpacket.getFixHead().setResp(true);
                             RemoteNSession session = nss.getRemoteSession(packfrom);
                             if (session != null) {
                                 session.onPacket(vpacket, null);

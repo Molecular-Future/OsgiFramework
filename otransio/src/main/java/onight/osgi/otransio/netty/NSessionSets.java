@@ -45,6 +45,7 @@ public class NSessionSets {
 
     void setDispatcher(IActorDispatcher dispatcher){
         this.dispatcher = dispatcher;
+        this.localSessions.setDispatcher(dispatcher);
     }
     public boolean notReady(){
         return this.dispatcher==null;
@@ -127,6 +128,7 @@ public class NSessionSets {
                 .expireAfterAccess(ParamConfig.SEND_WAIT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .removalListener(rmv->{
                     if(rmv.wasEvicted()){
+                        log.debug("rmv key:{}, clazz:{}, obj:{}",rmv.getKey(), rmv.getClass().getSimpleName(), rmv.getCause());
                         //处理超时的请求
                         String key = (String)rmv.getKey();
                         NPacketTuple pt = (NPacketTuple)rmv.getValue();
@@ -191,27 +193,28 @@ public class NSessionSets {
         sb.append("\"name\":\"").append(selfNodeName()).append("\"");
         sb.append(",\"addr\":\"").append(self.getNodeInfo().getAddr()).append(":").append(self.getNodeInfo().getPort())
                 .append("\"");
-        sb.append(",\"scount\":").append(remoteSessions.count());
-        sb.append(",\"lcount\":").append(localSessions.count());
-        sb.append(",\"modules\":[");
-        i=0;
-        Enumeration<String> keys = localSessions.keys();
-        while(keys.hasMoreElements()){
-            String k = keys.nextElement();
-            if(k!=null){
-                LocalModuleSession lm = (LocalModuleSession)localSessions.get(k);
-                if(lm!=null){
-                    if(i>0){
-                        sb.append(",");
-                    }
-                    i++;
-                    sb.append(lm.getJsonStr());
-                }
-            }
-        }
-        sb.append("]");
+        sb.append(",\"rc\":").append(remoteSessions.count());
+        sb.append(",\"lc\":").append(localSessions.count());
+//        sb.append(",\"modules\":[");
+//        i=0;
+//        Enumeration<String> keys = localSessions.keys();
+//        while(keys.hasMoreElements()){
+//            String k = keys.nextElement();
+//            if(k!=null){
+//                LocalModuleSession lm = (LocalModuleSession)localSessions.get(k);
+//                if(lm!=null){
+//                    if(i>0){
+//                        sb.append(",");
+//                    }
+//                    i++;
+//                    sb.append(lm.getJsonStr());
+//                }
+//            }
+//        }
+//        sb.append("]");
         sb.append(",\"sessions\":[");
         i = 0;
+        Enumeration<String> keys = remoteSessions.keys();
         while(keys.hasMoreElements()) {
             String k = keys.nextElement();
             if (k != null) {

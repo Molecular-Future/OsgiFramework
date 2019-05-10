@@ -24,6 +24,10 @@ public class LocalModuleManager extends PSessionManager<NodeInfo> {
         return new LocalSessionWrapper(dispatcher, eeg, key);
     }
 
+    public void setDispatcher(IActorDispatcher dispatcher){
+        this.dispatcher = dispatcher;
+    }
+
     private static class LocalSessionWrapper extends LocalModuleSession{
         private IActorDispatcher dispatcher;
         private EventExecutorGroup eeg;
