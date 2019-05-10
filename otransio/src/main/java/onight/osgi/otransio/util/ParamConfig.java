@@ -12,7 +12,7 @@ public class ParamConfig {
     public static final String SOCKET_IMPL_N = "nsocket";
     public static final String SOCKET_IMPL = params.get("org.csc.transio.impl", "osocket");
 
-    public static final int NSOCK_THREAD_COUNT = params.get("ntrans.thread.count", 8);
+    public static final int NSOCK_THREAD_COUNT = params.get("ntrans.thread.count", Runtime.getRuntime().availableProcessors()*4);
     //TCP 连接参数
     /**
      * tcp 读超时时间，单位毫秒，默认60秒
@@ -43,11 +43,6 @@ public class ParamConfig {
      */
     public static final int CLIENT_THREAD_COUNT = params.get("ntrans.client.thread.count", 0);
     /**
-     * 客户端的线程是否共享，默认为 false
-     */
-    public static final boolean CLIENT_THREAD_SHARED = "true".equalsIgnoreCase(params.get("ntrans.client.thread.shared", "false"));
-
-    /**
      * 心跳时间间隔，单位秒，默认30，最小5
      */
     public static final int HB_DELAY = params.get("otrans.checkhealth.delay", 30);
@@ -56,11 +51,6 @@ public class ParamConfig {
      * 请求消息最大缓存数量
      */
     public static final int PACK_CAHCE_MAXSIZE=params.get("otrans.pack.cache.size", 100000);
-
-    /**
-     * 发送超时
-     */
-    public static final int RESEND_TIMEOUT_MS = params.get("otrans.resend.timeoutms", 60000);
 
     /**
      * 每IP最大连接数
@@ -72,8 +62,10 @@ public class ParamConfig {
      */
     public static final int NO_AUTH_TIMEOUT_SEC = params.get("otrans.max.conn.timeout.sec", 30);
 
+
     public static final int RECONNECT_TIME_MS = params.get("ntrans.reconnect.ms", 5000);
 
+    public static final int SEND_WAIT_TIMEOUT_MS = params.get("ntrans.send.wait.ms", 60000);
     public static final int SEND_RETRY_TIMES = params.get("ntrans.retry.times", 3);
 
     public static final int SEND_RETRY_DELAY_MS = params.get("ntrans.retry.delay.ms", 3000);

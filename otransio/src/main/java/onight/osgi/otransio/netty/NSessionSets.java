@@ -1,22 +1,18 @@
 package onight.osgi.otransio.netty;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Promise;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.impl.NodeInfo;
-import onight.osgi.otransio.nio.PacketTuple;
 import onight.osgi.otransio.sm.RemoteModuleBean;
 import onight.osgi.otransio.util.ParamConfig;
-import onight.tfw.async.CallBack;
-import onight.tfw.otransio.api.MessageException;
-import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.LocalModuleSession;
 import onight.tfw.otransio.api.session.PSession;
 import onight.tfw.outils.serialize.UUIDGenerator;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.fc.zippo.dispatcher.IActorDispatcher;
 
@@ -76,14 +72,12 @@ public class NSessionSets {
     }
 
     public PSession session(String key, NodeInfo node){
-        if(node==null||node.getNodeName()==null){
-            log.warn("nodeInfo is null or name is null.");
-            return null;
-        }
         if(isLocalSession(node)){
+            log.debug("get local session, key={}, node={}", key, node);
             return localSessions.session(key, node);
         }
         else{
+            log.debug("get remote session, key={}, node={}", key, node);
             return remoteSessions.session(key, node);
         }
     }
@@ -129,7 +123,7 @@ public class NSessionSets {
     private Cache<String, NPacketTuple> buildPacketCache(){
         return CacheBuilder.newBuilder()
                 .maximumSize(ParamConfig.PACK_CAHCE_MAXSIZE)
-                .expireAfterAccess(ParamConfig.RESEND_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .expireAfterAccess(ParamConfig.SEND_WAIT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .removalListener(rmv->{
                     if(rmv.wasEvicted()){
                         //处理超时的请求
@@ -167,6 +161,7 @@ public class NSessionSets {
     }
 
     private boolean isLocalSession(NodeInfo node){
+        log.debug("is local ? local={}, node={}", this.self.getNodeInfo(), node);
         return node==null
                 || (StringUtils.equalsIgnoreCase(node.getAddr(), this.self.getNodeInfo().getAddr())
                    && node.getPort() == this.self.getNodeInfo().getPort())

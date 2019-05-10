@@ -1,6 +1,7 @@
 package onight.osgi.otransio.netty.handler;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.slf4j.Slf4j;
@@ -28,12 +29,17 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
     }
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        if(log.isDebugEnabled()) {
+            log.debug("decode begin, state:{}, ch:{}, in:{}",
+                    state(), ctx.channel(), in);
+        }
+
         switch(state()){
             //解析消息头
             case READ_HEADER: {
                 boolean headerCheckResult;
                 try {
-                    header = FixHeader.parseFrom(in.readBytes(FixHeader.LENGTH).array());
+                    header = FixHeader.parseFrom(ByteBufUtil.getBytes(in.readBytes(FixHeader.LENGTH)));
                     headerCheckResult = checkFixHeader();
                 } catch (MessageException me) {
                     log.warn("fixHeader invalid, error::", me);
@@ -56,7 +62,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
             } break;
             //解析扩展头
             case READ_EXT_HEADER: {
-                extHeader = ExtHeader.buildFrom(in.readBytes(header.getExtsize()).array());
+                extHeader = ExtHeader.buildFrom(ByteBufUtil.getBytes(in.readBytes(header.getExtsize())));
                 //判断是否需要解析消息体，不需要的话直接返回
                 if (header.getBodysize() > 0) {
                     checkpoint(FramePacketDecoderState.READ_CONTENT);
@@ -67,7 +73,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
             //解析消息体
             case READ_CONTENT: {
                 ByteBuf bf = in.readBytes(header.getBodysize());
-                body = new byte[header.getBodysize()];
+                body = ByteBufUtil.getBytes(bf);
                 bf.readBytes(body);
                 decodeDone(out);
             } break;
@@ -101,9 +107,9 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
         //for debug
         if(log.isDebugEnabled()){
             String sendtime = (String) fp.getExtHead().get(Packets.LOG_TIME_SENT);
-            log.debug("netty trans recv gcmd:{}{},bodysize:{},cost:{} ms,sent={},resp={},sync={},pio={}",
+            log.debug("netty trans recv gcmd:{}{},bodysize:{},extsize:{}, cost:{} ms,sent={},resp={},sync={},pio={}",
                     header.getCmd(), header.getModule(),
-                    header.getBodysize(),
+                    header.getBodysize(), header.getExtsize(),
                     (System.currentTimeMillis() - Long.parseLong(sendtime)), sendtime, header.isResp(),
                     header.isSync(), header.getPrio());
         }
@@ -113,5 +119,14 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
         extHeader = null;
         body = null;
         checkpoint(FramePacketDecoderState.READ_HEADER);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        if(log.isDebugEnabled()){
+            log.debug("decode exceptions::", cause);
+        }
+        ctx.close();
+        //super.exceptionCaught(ctx, cause);
     }
 }

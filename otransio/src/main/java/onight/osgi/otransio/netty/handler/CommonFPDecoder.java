@@ -59,7 +59,8 @@ public class CommonFPDecoder extends MessageToMessageDecoder<FramePacket> {
                 }
             }
             else{
-                log.error("remote session not found: name={}, ch={}", rmb.getNodeInfo().getNodeName(), ctx.channel());
+                log.error("remote session not found: node={}, ch={}",
+                        rmb.getNodeInfo(), ctx.channel());
                 ctx.channel().close();
             }
         } else {

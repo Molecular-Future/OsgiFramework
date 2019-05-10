@@ -69,6 +69,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
         }
         try {
             LocalModuleSession lms = nss.getLocalSession(pack.getModule());
+            log.debug("get lms gcmd:{}{}, lms:{}",
+                    pack.getModule(), pack.getCMD(), lms);
             if(lms!=null){
                 lms.onPacket(pack, handler);
             }

@@ -32,14 +32,14 @@ public class FramePacketEncoder extends MessageToByteEncoder<FramePacket> {
             out.writeBytes(ext);
         }
         if(body.length>0){
-            out.writeBytes(ext);
+            out.writeBytes(body);
         }
 
         //for debug
         if(log.isDebugEnabled()){
-            log.debug("netty trans send gcmd:{}{},bodysize {},sent@{},resp={},sync={},prio={}",
+            log.debug("netty trans send gcmd:{}{},bodysize:{},extsize:{},sent@{},resp={},sync={},prio={}",
                     msg.getFixHead().getCmd(), msg.getFixHead().getModule(),
-                    msg.getFixHead().getBodysize(), senttime, msg.getFixHead().isResp(),
+                    msg.getFixHead().getBodysize(), msg.getFixHead().getExtsize(), senttime, msg.getFixHead().isResp(),
                     msg.getFixHead().isSync(),msg.getFixHead().getPrio());
         }
     }

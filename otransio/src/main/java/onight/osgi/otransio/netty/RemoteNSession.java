@@ -48,7 +48,7 @@ public class RemoteNSession extends PSession {
     private AtomicReference<Iterator<Channel>> channelItRef = new AtomicReference<>();
     private PriorityBlockingQueue<NPacketTuple> writeQ;
     private NClient client;
-    private AtomicBoolean connected = new AtomicBoolean(false);
+    private AtomicBoolean connecting= new AtomicBoolean(false);
     private volatile boolean isClosed = false;
     private LongAdder qCounter = new LongAdder();
     private ArrayList<NodeInfo> subNodes = new ArrayList<>();
@@ -62,36 +62,46 @@ public class RemoteNSession extends PSession {
         this.writeQ = new PriorityBlockingQueue(100, RemoteNSession.fpComparator);
         this.client = new NClient(this.nss);
 
-        connect();
+        this.eeg.scheduleAtFixedRate(()->{
+            if(isClosed||channels.size()>0){
+                return;
+            }
+            connect();
+        }, 0, ParamConfig.RECONNECT_TIME_MS, TimeUnit.MILLISECONDS);
     }
 
     public void changeName(String name){
         nodeInfo.setNodeName(name);
     }
     private void connect() {
+        if(!connecting.compareAndSet(false, true)){
+            return;
+        }
+        log.debug("begin connect node:{}",nodeInfo);
         this.client.connect(nodeInfo.getAddr(), nodeInfo.getPort()).addListener(
                 (ChannelFutureListener) f -> {
                     if (f.isSuccess()) {
                         Channel ch = f.channel();
+                        log.debug("connect success, node:{}, ch:{}",nodeInfo, ch);
                         //发送登录消息
                         ch.attr(Packets.ATTR_AUTH_KEY).set(nss.selfNodeName());
                         ch.writeAndFlush(Packets.newLogin(nss.getSelf()));
                         channels.add(f.channel());
-                        connected.set(true);
+
                         eeg.submit(() -> flushWriteQ(f.channel()));
                     } else {
                         log.warn("connecting to " + nodeInfo.getAddr() + ":" + nodeInfo.getPort() + " failed", f.cause());
-                        if (!isClosed&&!connected.get()) {
-                            eeg.next().schedule(this::connect, ParamConfig.RECONNECT_TIME_MS, TimeUnit.MILLISECONDS);
-                        }
                     }
+                    connecting.set(false);
                 });
     }
 
     private void flushWriteQ(Channel ch){
         if(isClosed||ch==null){
+            log.debug("rns state invalid");
             return;
         }
+        log.debug("do flush write q, size:{}",writeQ.size());
         NPacketTuple pt = null;
         boolean hasWrite = false;
         while((pt=writeQ.poll())!=null){
@@ -106,10 +116,12 @@ public class RemoteNSession extends PSession {
 
     private void writeToChannel(Channel ch, NPacketTuple pt, boolean withFlush) {
         if(isClosed||pt.isWrited()){
+            log.debug("rns state invalid");
             return;
         }
         ch.write(pt.getPacket()).addListener(f -> {
             if (f.isSuccess()) {
+                log.debug("write pack success, packid:{}", getPacketId(pt));
                 pt.setWrited(true);
             }
             else{
@@ -118,12 +130,16 @@ public class RemoteNSession extends PSession {
                     if(!isClosed) {
                         eeg.schedule(
                                 () -> {
+                                    log.debug("pack resend begin, packid:{}", getPacketId(pt));
                                     //未达到重试次数则重新加入待发送队列
                                     pt.setWrited(false);
                                     nss.removeCachePack(getPacketId(pt));
                                     String newId = genPackID();
                                     changePacketId(pt.getPacket(), newId);
                                     nss.addCachePack(newId, pt);
+
+                                    log.debug("pack resend write to queue, packid:{}", getPacketId(pt));
+
                                     writeQ.offer(pt);
                                     qCounter.increment();
                                 }, ParamConfig.SEND_RETRY_DELAY_MS, TimeUnit.MILLISECONDS);
@@ -153,6 +169,7 @@ public class RemoteNSession extends PSession {
     }
 
     public RemoteNSession addChannel(Channel channel){
+        log.debug("add to session, node:{}, ch:{}",nodeInfo, channel);
         this.channels.add(channel);
         return this;
     }
@@ -163,6 +180,7 @@ public class RemoteNSession extends PSession {
 //    }
 
     public void parseUri(String uri){
+        log.debug("parse uri: {}", uri);
         subNodes.clear();
         for (String str : uri.split(",")) {
             if (!StringUtils.isBlank(str.trim())) {
@@ -177,6 +195,7 @@ public class RemoteNSession extends PSession {
     }
 
     public void closeSession(boolean sendDDNode){
+        log.debug("session closing, node:{}", nodeInfo);
         isClosed = true;
         if(!sendDDNode){
             channels.close();
@@ -195,11 +214,13 @@ public class RemoteNSession extends PSession {
     @Override
     public void onPacket(FramePacket pack, CompleteHandler handler) {
         if(isClosed){
+            log.debug("rns state invalid");
             if (handler!=null){
                 handler.onFailed(new TransIOException("s"));
             }
             return;
         }
+        log.debug("begin on packet");
         String packId = null;
         NPacketTuple pt = new NPacketTuple(pack, handler);
         if(pack.isSync() && handler!=null){
@@ -210,15 +231,18 @@ public class RemoteNSession extends PSession {
         Channel ch = nextChannel();
         if(ch!=null){
             if(qCounter.longValue()==0){
+                log.debug("direct send, packid:{}, ch:{}", getPacketId(pt), ch);
                 writeToChannel(ch, pt);
             }
             else{
+                log.debug("queue send and channel not null, packid:{}, ch:{}", getPacketId(pt),ch);
                 writeQ.offer(pt);
                 qCounter.increment();
                 eeg.submit(()->flushWriteQ(ch));
             }
         }
         else{
+            log.debug("queue send and channel is null, packid:{}", getPacketId(pt));
             writeQ.offer(pt);
             qCounter.increment();
         }

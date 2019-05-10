@@ -4,6 +4,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import lombok.AllArgsConstructor;
 import onight.osgi.otransio.netty.handler.*;
 import onight.osgi.otransio.util.ParamConfig;
@@ -23,6 +25,7 @@ public class NChanneIniter extends ChannelInitializer {
         cfg.setOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, ParamConfig.TCP_CONNECT_TIMEOUT);
         //handlers
         ch.pipeline()
+                .addLast(new LoggingHandler(LogLevel.DEBUG))
                 .addLast(new FramePacketDecoder())
                 .addLast(new FramePacketEncoder())
                 .addLast(new ResponseDecoder(nss))

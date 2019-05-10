@@ -12,8 +12,6 @@ import onight.tfw.mservice.NodeHelper;
 @Slf4j
 public class NServer {
 
-
-    private ServerBootstrap bootstrap = null;
     private EventLoopGroup parentGroup = null;
     private EventLoopGroup childGroup = null;
 
@@ -23,10 +21,10 @@ public class NServer {
         parentGroup = new NioEventLoopGroup(ParamConfig.SERVER_PARENT_THREAD_COUNT);
         childGroup = new NioEventLoopGroup(ParamConfig.SERVER_CHILDREN_THREAD_COUNT);
 
-        bootstrap = new ServerBootstrap()
+        ServerBootstrap bootstrap = new ServerBootstrap()
                 .group(parentGroup, childGroup)
                 .channel(NioServerSocketChannel.class)
-        .childHandler(new NChanneIniter(nss));
+                .childHandler(new NChanneIniter(nss));
         log.debug("begin bind port : {}", port);
         bootstrap.bind(port).addListener(
                 (ChannelFutureListener)f->log.debug("netty server started on {}",f.channel().localAddress()));
