@@ -31,6 +31,7 @@ public class NTransSender extends FutureSender {
         FramePacket pack;
         try {
             pack = promise.get(timeoutMS, TimeUnit.MILLISECONDS);
+            log.debug("send sync response ,packId:{}", pack.getExtStrProp(nss.getPackIDKey()));
         } catch (TimeoutException e) {
             pack = PacketHelper.toPBErrorReturn(framePacket, "-101", e.getMessage());
             log.warn("package send timeout::", e);
@@ -62,7 +63,6 @@ public class NTransSender extends FutureSender {
                     else{
                         exception = new MessageException(cause);
                     }
-                    log.debug("package asyncSend has error::", exception);
                     cb.onFailed(exception, PacketHelper.toPBErrorReturn(pack, "-100", exception.getMessage()));
                 }
             });
@@ -149,7 +149,16 @@ public class NTransSender extends FutureSender {
             node = NodeInfo.fromURI(uri, destTo);
         }
 
-        PSession ms = nss.session(destTo, node);
+        PSession ms = null;
+        if(destTo==null){
+            log.warn("destTo is null,uri:{}, packId:{}, gcmd:{}{}",
+                    uri,
+                    pack.getExtStrProp(nss.getPackIDKey()),
+                    pack.getModule(), pack.getCMD());
+        }
+        else{
+            ms = nss.session(destTo, node);
+        }
 
         if(ms!=null){
             //生成待发送数据
@@ -158,10 +167,12 @@ public class NTransSender extends FutureSender {
             ms.onPacket(pack, new CompleteHandler() {
                 @Override
                 public void onFinished(FramePacket framePacket) {
+                    log.debug("send packet response finished. packId:{}", framePacket.getExtStrProp(nss.getPackIDKey()));
                     promise.trySuccess(framePacket);
                 }
                 @Override
                 public void onFailed(Exception e) {
+                    log.debug("send packet response ex::", e);
                     promise.tryFailure(e);
                 }
             });

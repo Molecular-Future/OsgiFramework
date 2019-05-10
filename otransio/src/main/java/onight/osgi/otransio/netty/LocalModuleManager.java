@@ -37,7 +37,20 @@ public class LocalModuleManager extends PSessionManager<NodeInfo> {
         @Override
         public void onPacket(FramePacket pack, CompleteHandler handler) {
             final Runnable runner = ()->super.onPacket(pack, handler);
-            eeg.submit(runner);
+//            eeg.submit(runner);
+            if (pack.isSync()) {
+                if (pack.getFixHead().getPrio() == '8' || pack.getFixHead().getPrio() == '9') {
+                    dispatcher.executeNow(pack, runner);
+                } else {
+                    dispatcher.postWithTimeout(pack, runner, 60 * 1000, handler);
+                }
+            } else {
+                if (pack.getFixHead().getPrio() == '8' || pack.getFixHead().getPrio() == '9') {
+                    dispatcher.executeNow(pack, runner);
+                } else {
+                    dispatcher.post(pack, runner);
+                }
+            }
         }
     }
 }

@@ -36,8 +36,8 @@ public class HeartBeatHandler extends IdleStateHandler {
             FramePacket fp = (FramePacket)msg;
             if(PackHeader.CMD_HB.equals(fp.getModuleAndCMD())){
                 //TODO 处理心跳消息
-                if(log.isTraceEnabled()){
-                    log.trace("[HB] From {} to {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
+                if(log.isDebugEnabled()){
+                    log.debug("[HB] From {} to {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
                 }
                 return;
             }

@@ -73,11 +73,11 @@ public class NSessionSets {
 
     public PSession session(String key, NodeInfo node){
         if(isLocalSession(node)){
-            log.debug("get local session, key={}, node={}", key, node);
+//            log.debug("get local session, key={}, node={}", key, node);
             return localSessions.session(key, node);
         }
         else{
-            log.debug("get remote session, key={}, node={}", key, node);
+//            log.debug("get remote session, key={}, node={}", key, node);
             return remoteSessions.session(key, node);
         }
     }
@@ -135,7 +135,8 @@ public class NSessionSets {
                         if(log.isWarnEnabled()){
                             logTimeoutPacket(key, pt);
                         }
-                        pt.getHandler().onFailed(new TimeoutException("pack send timeout"));
+                        String packId = pt.getPacket().getExtStrProp(this.getPackIDKey());
+                        pt.getHandler().onFailed(new TimeoutException("pack send timeout, packId:"+packId));
                     }
                 })
                 .build();
@@ -161,7 +162,8 @@ public class NSessionSets {
     }
 
     private boolean isLocalSession(NodeInfo node){
-        log.debug("is local ? local={}, node={}", this.self.getNodeInfo(), node);
+        //TODO 单机调试时会有问题
+//        log.debug("is local ? local={}, node={}", this.self.getNodeInfo(), node);
         return node==null
                 || (StringUtils.equalsIgnoreCase(node.getAddr(), this.self.getNodeInfo().getAddr())
                    && node.getPort() == this.self.getNodeInfo().getPort())

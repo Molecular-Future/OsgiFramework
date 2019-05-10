@@ -29,8 +29,8 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
     }
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if(log.isDebugEnabled()) {
-            log.debug("decode begin, state:{}, ch:{}, in:{}",
+        if(log.isTraceEnabled()) {
+            log.trace("decode begin, state:{}, ch:{}, in:{}",
                     state(), ctx.channel(), in);
         }
 

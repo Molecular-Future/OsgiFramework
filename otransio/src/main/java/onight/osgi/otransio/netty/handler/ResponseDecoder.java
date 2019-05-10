@@ -27,6 +27,7 @@ public class ResponseDecoder extends MessageToMessageDecoder<FramePacket> {
             if(msg.getExtHead().isExist(nss.getPackIDKey())){
                 //通过packId获取缓存的请求报文
                 String packId = msg.getExtStrProp(nss.getPackIDKey());
+                log.debug("resp pack to packId:{}", packId);
                 NPacketTuple pt = nss.removeCachePack(packId);
                 if(pt!=null){
                     //如果有CompleteHandler，则触发完成事件

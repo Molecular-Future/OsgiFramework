@@ -21,7 +21,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FramePacket pack) throws Exception {
         CompleteHandler handler = null;
-        if (pack.isSync() && !pack.isResp()) {// 需要等待回应的
+        log.debug("receive request pack, id:{}", pack.getExtHead());
+        if (pack.isSync()) {
 
             final String packfrom = pack.getExtStrProp(PackHeader.PACK_FROM);
 

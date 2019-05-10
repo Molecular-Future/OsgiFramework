@@ -80,19 +80,23 @@ public class RemoteNSession extends PSession {
         log.debug("begin connect node:{}",nodeInfo);
         this.client.connect(nodeInfo.getAddr(), nodeInfo.getPort()).addListener(
                 (ChannelFutureListener) f -> {
-                    if (f.isSuccess()) {
-                        Channel ch = f.channel();
-                        log.debug("connect success, node:{}, ch:{}",nodeInfo, ch);
-                        //发送登录消息
-                        ch.attr(Packets.ATTR_AUTH_KEY).set(nss.selfNodeName());
-                        ch.writeAndFlush(Packets.newLogin(nss.getSelf()));
-                        channels.add(f.channel());
+                    try {
+                        if (f.isSuccess()) {
+                            Channel ch = f.channel();
+                            log.debug("connect success, node:{}, ch:{}", nodeInfo, ch);
+                            //发送登录消息
+                            ch.attr(Packets.ATTR_AUTH_KEY).set(nss.selfNodeName());
+                            ch.writeAndFlush(Packets.newLogin(nss.getSelf()));
+                            channels.add(f.channel());
 
-                        eeg.submit(() -> flushWriteQ(f.channel()));
-                    } else {
-                        log.warn("connecting to " + nodeInfo.getAddr() + ":" + nodeInfo.getPort() + " failed", f.cause());
+                            eeg.submit(() -> flushWriteQ(f.channel()));
+                        } else {
+                            log.warn("connecting to " + nodeInfo.getAddr() + ":" + nodeInfo.getPort() + " failed", f.cause());
+                        }
                     }
-                    connecting.set(false);
+                    finally {
+                        connecting.set(false);
+                    }
                 });
     }
 
@@ -220,7 +224,7 @@ public class RemoteNSession extends PSession {
             }
             return;
         }
-        log.debug("begin on packet");
+//        log.debug("begin on packet");
         String packId = null;
         NPacketTuple pt = new NPacketTuple(pack, handler);
         if(pack.isSync() && handler!=null){
@@ -231,20 +235,24 @@ public class RemoteNSession extends PSession {
         Channel ch = nextChannel();
         if(ch!=null){
             if(qCounter.longValue()==0){
-                log.debug("direct send, packid:{}, ch:{}", getPacketId(pt), ch);
+                log.debug("direct send, node:{}, gcmd:{}{}, packid:{}, ch:{}",
+                        nodeInfo, pt.getPacket().getModule(), pt.getPacket().getCMD(), getPacketId(pt), ch);
                 writeToChannel(ch, pt);
             }
             else{
-                log.debug("queue send and channel not null, packid:{}, ch:{}", getPacketId(pt),ch);
+                log.debug("queue send and channel not null, node:{}, gcmd:{}{}, packid:{}, ch:{}",
+                        nodeInfo, pt.getPacket().getModule(), pt.getPacket().getCMD(), getPacketId(pt),ch);
                 writeQ.offer(pt);
                 qCounter.increment();
                 eeg.submit(()->flushWriteQ(ch));
             }
         }
         else{
-            log.debug("queue send and channel is null, packid:{}", getPacketId(pt));
+            log.debug("queue send and channel is null, node:{}, gcmd:{}{}, packid:{}",
+                    nodeInfo, pt.getPacket().getModule(), pt.getPacket().getCMD(), getPacketId(pt));
             writeQ.offer(pt);
             qCounter.increment();
+            eeg.submit(()->flushWriteQ(ch));
         }
     }
 
