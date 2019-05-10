@@ -306,4 +306,40 @@ public class RemoteNSession extends PSession {
 
         return ch;
     }
+
+
+    public String getJsonStr(){
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"name\":\"").append(nodeInfo.getNodeName()).append("\"");
+        sb.append(",\"addr\":\"").append(nodeInfo.getAddr()).append("\"");
+        sb.append(",\"port\":").append(nodeInfo.getPort());
+        sb.append(",\"qsize\":").append(writeQ.size());
+        int sz = channels.size();
+        sb.append(",\"chsize\":").append(sz);
+        if(sz>0) {
+            sb.append(",\"channels\":[");
+            int i = 0;
+            Iterator<Channel> it = channels.iterator();
+            while (it.hasNext()) {
+                Channel ch = it.next();
+                if(ch!=null){
+                    if(i>0){
+                        sb.append(",");
+                    }
+                    i++;
+                    sb.append("{");
+                    sb.append(",\"id\":\"").append(ch.id()).append("\"");
+                    sb.append("\"local\":\"").append(ch.localAddress()).append("\"");
+                    sb.append(",\"remote\":\"").append(ch.remoteAddress()).append("\"");
+                    sb.append(",\"isOpen\":\"").append(ch.isOpen()).append("\"");
+                    sb.append("}");
+                }
+            }
+            sb.append("]");
+        }
+        sb.append("}");
+
+        return sb.toString();
+    }
 }

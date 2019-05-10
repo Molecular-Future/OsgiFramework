@@ -16,6 +16,7 @@ import onight.tfw.outils.serialize.UUIDGenerator;
 import org.apache.commons.lang3.StringUtils;
 import org.fc.zippo.dispatcher.IActorDispatcher;
 
+import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -149,11 +150,11 @@ public class NSessionSets {
                 long duration = System.currentTimeMillis() - startTime;
                 if (pt != null) {
                     log.debug("remove timeout sync pack:" + key + ",past["
-                            + (System.currentTimeMillis() - startTime) + "]" + ",pt,name="
+                            + duration + "]" + ",pt,name="
                             + ",handler==" + pt.getHandler());
                 } else {
                     log.debug("remove timeout sync pack:" + key + ",past["
-                            + (System.currentTimeMillis() - startTime) + "]" + ",pt is null=");
+                            + duration + "]" + ",pt is null=");
                 }
             }
         } catch (Exception e) {
@@ -172,9 +173,60 @@ public class NSessionSets {
 
 
     String getSimpleJsonInfo(){
-        return "{}";
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"name\":\"").append(selfNodeName()).append("\"");
+        sb.append(",\"addr\":\"").append(self.getNodeInfo().getAddr()).append(":").append(self.getNodeInfo().getPort())
+                .append("\"");
+        sb.append(",\"scount\":").append(remoteSessions.count());
+        sb.append(",\"lcount\":").append(localSessions.count());
+        sb.append("}");
+
+        return sb.toString();
     }
     String getJsonInfo(){
-        return "{}";
+        int i;
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"name\":\"").append(selfNodeName()).append("\"");
+        sb.append(",\"addr\":\"").append(self.getNodeInfo().getAddr()).append(":").append(self.getNodeInfo().getPort())
+                .append("\"");
+        sb.append(",\"scount\":").append(remoteSessions.count());
+        sb.append(",\"lcount\":").append(localSessions.count());
+        sb.append(",\"modules\":[");
+        i=0;
+        Enumeration<String> keys = localSessions.keys();
+        while(keys.hasMoreElements()){
+            String k = keys.nextElement();
+            if(k!=null){
+                LocalModuleSession lm = (LocalModuleSession)localSessions.get(k);
+                if(lm!=null){
+                    if(i>0){
+                        sb.append(",");
+                    }
+                    i++;
+                    sb.append(lm.getJsonStr());
+                }
+            }
+        }
+        sb.append("]");
+        sb.append(",\"sessions\":[");
+        i = 0;
+        while(keys.hasMoreElements()) {
+            String k = keys.nextElement();
+            if (k != null) {
+                RemoteNSession rm = (RemoteNSession) remoteSessions.get(k);
+                if(rm!=null){
+                    if(i>0){
+                        sb.append(",");
+                    }
+                    i++;
+                    sb.append(rm.getJsonStr());
+                }
+            }
+        }
+        sb.append("]");
+        sb.append("}");
+        return sb.toString();
     }
 }

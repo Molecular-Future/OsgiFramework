@@ -3,6 +3,8 @@ package onight.osgi.otransio.netty;
 import onight.osgi.otransio.impl.NodeInfo;
 import onight.tfw.otransio.api.session.PSession;
 
+import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class PSessionManager<V> {
@@ -31,6 +33,13 @@ public abstract class PSessionManager<V> {
 
     public PSession get(String key){
         return sessions.get(key);
+    }
+
+    public long count(){
+        return sessions.mappingCount();
+    }
+    public Enumeration<String> keys(){
+        return sessions.keys();
     }
 
     public PSession removeSession(String key){
