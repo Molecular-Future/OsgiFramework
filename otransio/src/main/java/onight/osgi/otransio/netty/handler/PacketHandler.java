@@ -47,7 +47,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
                             vpacket.getFixHead().setSync(false);
                             RemoteNSession session = nss.getRemoteSession(packfrom);
                             if (session != null) {
-                                session.onPacket(vpacket, null);
+                                session.onPacket(vpacket, NSessionSets.NIL_COMPLETE_HANDLER);
                             } else {
                                 log.error("drop response packet:" + pack.getModuleAndCMD() + ",packfrom=" + packfrom);
                             }
@@ -75,6 +75,10 @@ public class PacketHandler extends SimpleChannelInboundHandler<FramePacket> {
             if(lms!=null){
                 lms.onPacket(pack, handler);
             }
+            else{
+                log.warn("lms not found. gcmd:{}", pack.getModuleAndCMD());
+            }
+
         } catch (Throwable t) {
             log.error("error in process pack:" + pack.getCMD() + "" + pack.getModule() + ",conn=" + ctx.channel()
                     + ":pack=" + pack, t);

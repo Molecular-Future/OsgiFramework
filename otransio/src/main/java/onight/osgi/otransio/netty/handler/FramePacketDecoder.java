@@ -2,6 +2,7 @@ package onight.osgi.otransio.netty.handler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +58,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
                 } else if (header.getBodysize() > 0) {
                     checkpoint(FramePacketDecoderState.READ_CONTENT);
                 } else {
-                    decodeDone(out);
+                    decodeDone(ctx.channel(),out);
                 }
             } break;
             //解析扩展头
@@ -67,7 +68,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
                 if (header.getBodysize() > 0) {
                     checkpoint(FramePacketDecoderState.READ_CONTENT);
                 } else {
-                    decodeDone(out);
+                    decodeDone(ctx.channel(),out);
                 }
             } break;
             //解析消息体
@@ -75,7 +76,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
                 ByteBuf bf = in.readBytes(header.getBodysize());
                 body = ByteBufUtil.getBytes(bf);
                 bf.readBytes(body);
-                decodeDone(out);
+                decodeDone(ctx.channel(),out);
             } break;
             default:
                 log.error("unknown state error, closed connection:{}", ctx.channel());
@@ -92,7 +93,7 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
         }
     }
 
-    private void decodeDone(List<Object> out){
+    private void decodeDone(Channel ch, List<Object> out){
         //如果扩展头或消息体不存在，使用空数据
         if(extHeader==null){
             extHeader = EMPTY_EXT_HEADER;
@@ -107,11 +108,11 @@ public class FramePacketDecoder extends ReplayingDecoder<FramePacketDecoderState
         //for debug
         if(log.isDebugEnabled()){
             String sendtime = (String) fp.getExtHead().get(Packets.LOG_TIME_SENT);
-            log.debug("netty trans recv gcmd:{}{},bodysize:{},extsize:{}, cost:{} ms,sent={},resp={},sync={},pio={},vkvs={}",
+            log.debug("netty trans recv gcmd:{}{},bodysize:{},extsize:{}, cost:{} ms,sent={},resp={},sync={},pio={},vkvs={},ch:{}",
                     header.getCmd(), header.getModule(),
                     header.getBodysize(), header.getExtsize(),
                     (System.currentTimeMillis() - Long.parseLong(sendtime)), sendtime, header.isResp(),
-                    header.isSync(), header.getPrio(),fp.getExtHead().getVkvs());
+                    header.isSync(), header.getPrio(),fp.getExtHead().getVkvs(), ch);
         }
 
         //重置状态

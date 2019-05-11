@@ -215,7 +215,7 @@ public class RemoteNSession extends PSession {
     }
 
     public void closeSession(boolean sendDDNode){
-        log.debug("session closing, node:{}", nodeInfo);
+        log.debug("session closing, node:{}, sendDDNode:{}", nodeInfo, sendDDNode);
         isClosed = true;
         if(!sendDDNode){
             channels.close();
@@ -236,7 +236,7 @@ public class RemoteNSession extends PSession {
         if(isClosed){
             log.debug("rns state invalid");
             if (handler!=null){
-                handler.onFailed(new TransIOException("s"));
+                handler.onFailed(new TransIOException("node:"+nodeInfo+",pack:"+pack.getExtHead().getVkvs()));
             }
             return;
         }

@@ -112,7 +112,9 @@ public class NTransSender extends FutureSender {
         }
 
         if(!nss.notReady()){
+            String oldName = nss.selfNodeName();
             nss.changeSelfNodeName(s);
+            log.debug("change node name {} => {}, s={}", oldName, nss.selfNodeName(), s);
         }
         else{
             throw new MessageException("nss not ready and Thread interrupted!!!");

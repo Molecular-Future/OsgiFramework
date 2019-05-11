@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.impl.NodeInfo;
 import onight.osgi.otransio.sm.RemoteModuleBean;
 import onight.osgi.otransio.util.ParamConfig;
+import onight.tfw.async.NilCompleteHandler;
 import onight.tfw.otransio.api.session.LocalModuleSession;
 import onight.tfw.otransio.api.session.PSession;
 import onight.tfw.outils.serialize.UUIDGenerator;
@@ -22,6 +23,8 @@ import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class NSessionSets {
+
+    public static final NilCompleteHandler NIL_COMPLETE_HANDLER = new NilCompleteHandler();
     private NSocketImpl socket;
     private Cache<String, NPacketTuple> waitResponsePacks;
     private volatile IActorDispatcher dispatcher = null;
@@ -100,6 +103,7 @@ public class NSessionSets {
             return;
         }
         synchronized(this){
+            log.debug("change name: {}=>{}", oldName, newName);
             RemoteNSession session = (RemoteNSession)remoteSessions.removeSession(oldName);
             if(session!=null){
                 session.changeName(newName);
@@ -109,12 +113,13 @@ public class NSessionSets {
     }
 
     public void dropSession(String nodeName, boolean sendDDNode){
-        RemoteNSession rms = (RemoteNSession)remoteSessions.get(nodeName);
-        if(rms!=null){
-            rms.closeSession(sendDDNode);
-        }
-        else{
-            log.debug("drop unknown session: name={}", nodeName);
+        synchronized(this) {
+            RemoteNSession rms = (RemoteNSession) remoteSessions.removeSession(nodeName);
+            if (rms != null) {
+                rms.closeSession(sendDDNode);
+            } else {
+                log.debug("drop unknown session: name={}", nodeName);
+            }
         }
     }
 
@@ -195,23 +200,6 @@ public class NSessionSets {
                 .append("\"");
         sb.append(",\"rc\":").append(remoteSessions.count());
         sb.append(",\"lc\":").append(localSessions.count());
-//        sb.append(",\"modules\":[");
-//        i=0;
-//        Enumeration<String> keys = localSessions.keys();
-//        while(keys.hasMoreElements()){
-//            String k = keys.nextElement();
-//            if(k!=null){
-//                LocalModuleSession lm = (LocalModuleSession)localSessions.get(k);
-//                if(lm!=null){
-//                    if(i>0){
-//                        sb.append(",");
-//                    }
-//                    i++;
-//                    sb.append(lm.getJsonStr());
-//                }
-//            }
-//        }
-//        sb.append("]");
         sb.append(",\"sessions\":[");
         i = 0;
         Enumeration<String> keys = remoteSessions.keys();
@@ -225,6 +213,23 @@ public class NSessionSets {
                     }
                     i++;
                     sb.append(rm.getJsonStr());
+                }
+            }
+        }
+        sb.append("]");
+        sb.append(",\"modules\":[");
+        i=0;
+        keys = localSessions.keys();
+        while(keys.hasMoreElements()){
+            String k = keys.nextElement();
+            if(k!=null){
+                LocalModuleSession lm = (LocalModuleSession)localSessions.get(k);
+                if(lm!=null){
+                    if(i>0){
+                        sb.append(",");
+                    }
+                    i++;
+                    sb.append(lm.getJsonStr());
                 }
             }
         }
