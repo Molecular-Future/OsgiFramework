@@ -2,7 +2,6 @@ package onight.osgi.otransio.netty.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.netty.NSessionSets;
 import onight.osgi.otransio.netty.RemoteNSession;

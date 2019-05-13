@@ -5,6 +5,7 @@ import onight.osgi.otransio.ISocket;
 import onight.tfw.otransio.api.IPacketSender;
 import onight.tfw.otransio.api.session.CMDService;
 import onight.tfw.otransio.api.session.LocalModuleSession;
+import org.apache.commons.lang3.StringUtils;
 import org.fc.zippo.dispatcher.IActorDispatcher;
 
 @Slf4j
@@ -41,9 +42,11 @@ public class NSocketImpl implements ISocket {
 
     @Override
     public void bindCMDService(CMDService service) {
-        LocalModuleSession ms = nss.localSession(service.getModule());
-        for (String cmd : service.getCmds()) {
-            ms.registerService(cmd, service);
+        if(StringUtils.isNotBlank(service.getModule())) {
+            LocalModuleSession ms = nss.localSession(service.getModule());
+            for (String cmd : service.getCmds()) {
+                ms.registerService(cmd, service);
+            }
         }
     }
 

@@ -31,6 +31,7 @@ public class NSessionSets {
     private EventExecutorGroup eeg;
     private LocalModuleManager localSessions;
     private RemoteSessionManager remoteSessions;
+    private static final long CLEAN_DURATION = ParamConfig.CLEAN_EMPTY_SESSION*1000;
     @Getter
     private String packIDKey;
 
@@ -44,6 +45,8 @@ public class NSessionSets {
         this.eeg = new DefaultEventExecutorGroup(ParamConfig.NSOCK_THREAD_COUNT);
         this.remoteSessions = new RemoteSessionManager(this, this.eeg);
         this.localSessions = new LocalModuleManager(this, this.dispatcher, this.eeg);
+        //清理空的RemoteNSession
+        this.eeg.scheduleWithFixedDelay(()-> cleanRemoteSession(), ParamConfig.CLEAN_EMPTY_SESSION, ParamConfig.CLEAN_EMPTY_SESSION, TimeUnit.SECONDS);
     }
 
     void setDispatcher(IActorDispatcher dispatcher){
@@ -68,6 +71,18 @@ public class NSessionSets {
 
     public void addCachePack(String packId, NPacketTuple packetTuple){
         waitResponsePacks.put(packId, packetTuple);
+    }
+
+    public void cleanRemoteSession(){
+        long curTime = System.currentTimeMillis();
+        remoteSessions.sessions.forEach((k,v)->{
+            RemoteNSession rms = (RemoteNSession)v;
+            if(rms!=null
+                    &&(rms.isClosed()
+                    ||rms.channelCount()==0&&(curTime-rms.getCreateTimestamp()>CLEAN_DURATION))){
+                remoteSessions.sessions.remove(k,v);
+            }
+        });
     }
 
     public NPacketTuple removeCachePack(String packId){

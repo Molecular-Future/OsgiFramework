@@ -13,20 +13,28 @@ import onight.tfw.otransio.api.beans.FramePacket;
 public class HeartBeatHandler extends IdleStateHandler {
 
     private NSessionSets nss;
+    private boolean enable;
 
-    public HeartBeatHandler(NSessionSets nss, int idleTimeSeconds) {
+    public HeartBeatHandler(NSessionSets nss, boolean enable, int idleTimeSeconds) {
         //TODO 现在仅当端口在idleTimeSeconds秒内既没有读也没有写时才发送Heartbeat
         super(0, 0, idleTimeSeconds);
+        this.enable = enable;
         this.nss = nss;
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if(evt instanceof IdleStateEvent){
-            //发送心跳消息
-            FramePacket hb = Packets.newHB(nss.selfNodeName());
-            ctx.writeAndFlush(hb);
-            super.userEventTriggered(ctx, evt);
+            if(enable) {
+                //发送心跳消息
+                FramePacket hb = Packets.newHB(nss.selfNodeName());
+                ctx.writeAndFlush(hb);
+                super.userEventTriggered(ctx, evt);
+            }
+            else{
+                //如果enable为false，则在空闲时关闭连接
+                ctx.channel().close();
+            }
         }
     }
 

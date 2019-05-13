@@ -11,10 +11,6 @@ import onight.tfw.otransio.api.session.PSession;
 import org.apache.commons.lang3.StringUtils;
 import org.fc.zippo.dispatcher.IActorDispatcher;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 @Slf4j
 @AllArgsConstructor
 public class LocalModuleManager extends PSessionManager<NodeInfo> {

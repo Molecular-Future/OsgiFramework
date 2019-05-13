@@ -1,14 +1,11 @@
 package onight.osgi.otransio.netty;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutorGroup;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.exception.TransIOException;
 import onight.osgi.otransio.impl.NodeInfo;
@@ -22,11 +19,13 @@ import onight.tfw.otransio.api.beans.FramePacket;
 import onight.tfw.otransio.api.session.PSession;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
 @Slf4j
@@ -37,7 +36,7 @@ public class RemoteNSession extends PSession {
     private static Comparator<NPacketTuple> fpComparator = Comparator.comparingInt(o -> o.getPacket().getFixHead().getPrio());
     private final String rand = "r_" + String.format("%05d", (int) (Math.random() * 100000)) + "_";
     private AtomicLong idCounter = new AtomicLong(0);
-    private LongAdder idxAdder = new LongAdder();
+
     private String genPackID() {
         return rand + "_" + System.currentTimeMillis() + "_" + idCounter.incrementAndGet();
     }
@@ -45,13 +44,21 @@ public class RemoteNSession extends PSession {
     private ChannelGroup channels;
     private NSessionSets nss;
     private EventExecutorGroup eeg;
-    private AtomicReference<Iterator<Channel>> channelItRef = new AtomicReference<>();
+    @Getter
+    private final long createTimestamp = System.currentTimeMillis();
+
     private PriorityBlockingQueue<NPacketTuple> writeQ;
     private NClient client;
     private AtomicBoolean connecting= new AtomicBoolean(false);
+    private AtomicInteger reConnectCount = new AtomicInteger(ParamConfig.RECONNECT_COUNT);
+    private final boolean reConnectHasLimit = (ParamConfig.RECONNECT_COUNT>0);
+    @Getter
     private volatile boolean isClosed = false;
     private LongAdder qCounter = new LongAdder();
     private ArrayList<NodeInfo> subNodes = new ArrayList<>();
+
+//    private AtomicReference<Iterator<Channel>> channelItRef = new AtomicReference<>();
+//    private LongAdder idxAdder = new LongAdder();
 //    private ConcurrentMap<ChannelId, Integer> activeChannels = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
@@ -60,18 +67,16 @@ public class RemoteNSession extends PSession {
         this.nss = nss;
         this.eeg = eeg;
         this.channels = new DefaultChannelGroup(nodeInfo.getNodeName(), eeg.next());
-        this.writeQ = new PriorityBlockingQueue(100, RemoteNSession.fpComparator);
+        this.writeQ = new PriorityBlockingQueue(ParamConfig.SEND_WRITEQ_INIT, RemoteNSession.fpComparator);
         this.client = new NClient(this.nss);
-//        this.channels.newCloseFuture().addListener((ChannelGroupFuture) l->{
-//            activeChannels.remove(l..id());
-//        });
-
+        //处理连接和重连
         this.eeg.scheduleAtFixedRate(()->{
             if(isClosed||channels.size()>0){
                 return;
             }
             connect();
         }, 0, ParamConfig.RECONNECT_TIME_MS, TimeUnit.MILLISECONDS);
+        //处理待发送队列
         this.eeg.scheduleWithFixedDelay(()->{
             if(isClosed||channels.size()==0){
                 return;
@@ -80,7 +85,7 @@ public class RemoteNSession extends PSession {
             if(ch!=null){
                 flushWriteQ(ch);
             }
-        }, 10, 10, TimeUnit.MILLISECONDS);
+        }, ParamConfig.SEND_WRITEQ_CHECK_DELAY, ParamConfig.SEND_WRITEQ_CHECK_DELAY, TimeUnit.MILLISECONDS);
     }
 
     public void changeName(String name){
@@ -89,6 +94,11 @@ public class RemoteNSession extends PSession {
     private void connect() {
         if(!connecting.compareAndSet(false, true)){
             return;
+        }
+        if(reConnectHasLimit && reConnectCount.getAndDecrement()<=0){
+            //如果达到重试次数，则关闭session，并且清理空的session
+            closeSession(false);
+            nss.cleanRemoteSession();
         }
         log.debug("begin connect node:{}",nodeInfo);
         this.client.connect(nodeInfo.getAddr(), nodeInfo.getPort()).addListener(
@@ -100,13 +110,10 @@ public class RemoteNSession extends PSession {
                             //发送登录消息
                             ch.attr(Packets.ATTR_AUTH_KEY).set(nss.selfNodeName());
                             ch.writeAndFlush(Packets.newLogin(nss.getSelf()));
-//                            activeChannels.put(f.channel().id(), DEF_V);
                             channels.add(f.channel());
-
-
                             eeg.submit(() -> flushWriteQ(f.channel()));
                         } else {
-                            log.warn("connecting to " + nodeInfo.getAddr() + ":" + nodeInfo.getPort() + " failed", f.cause());
+                            log.debug("connecting to {}:{} failed: {}", nodeInfo.getAddr(), nodeInfo.getPort(), f.cause());
                         }
                     }
                     finally {
@@ -145,7 +152,7 @@ public class RemoteNSession extends PSession {
             }
             else{
                 log.debug("write to channel failed", f.cause());
-                if(pt.compareAndIncRewriteTImes(ParamConfig.SEND_RETRY_TIMES)) {
+                if(pt.compareAndIncRewriteTImes(ParamConfig.SEND_RETRY_COUNT)) {
                     if(!isClosed) {
                         eeg.schedule(
                                 () -> {
@@ -187,17 +194,19 @@ public class RemoteNSession extends PSession {
         writeToChannel(ch, pt, true);
     }
 
-    public RemoteNSession addChannel(Channel channel){
-        log.debug("add to session, node:{}, ch:{}",nodeInfo, channel);
+    public RemoteNSession addChannel(Channel channel) {
+        log.debug("add to session, node:{}, ch:{}", nodeInfo, channel);
 //        activeChannels.put(channel.id(), DEF_V);
         this.channels.add(channel);
+        //处理登录超时
+        this.eeg.schedule(() -> {
+                    if(!channel.hasAttr(Packets.ATTR_AUTH_KEY)){
+                        channel.close();
+                    }
+                },
+                ParamConfig.NO_AUTH_TIMEOUT_SEC, TimeUnit.SECONDS);
         return this;
     }
-
-//    public RemoteNSession removeChannel(Channel channel){
-//        this.channels.remove(channel);
-//        return this;
-//    }
 
     public void parseUri(String uri){
         log.debug("parse uri: {}", uri);
@@ -229,6 +238,10 @@ public class RemoteNSession extends PSession {
                 pt.getHandler().onFailed(CLOSED_EX);
             }
         }
+    }
+
+    public int channelCount(){
+        return this.channels.size();
     }
 
     @Override

@@ -1,10 +1,8 @@
 package onight.osgi.otransio.netty;
 
-import onight.osgi.otransio.impl.NodeInfo;
 import onight.tfw.otransio.api.session.PSession;
 
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class PSessionManager<V> {

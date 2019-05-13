@@ -6,7 +6,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import lombok.extern.slf4j.Slf4j;
 import onight.osgi.otransio.netty.NPacketTuple;
 import onight.osgi.otransio.netty.NSessionSets;
-import onight.osgi.otransio.nio.PacketTuple;
 import onight.tfw.otransio.api.beans.FramePacket;
 
 import java.util.List;

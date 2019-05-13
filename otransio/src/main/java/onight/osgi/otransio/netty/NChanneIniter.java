@@ -30,7 +30,7 @@ public class NChanneIniter extends ChannelInitializer {
                 .addLast(new FramePacketEncoder())
                 .addLast(new ResponseDecoder(nss))
                 .addLast(new CommonFPDecoder(nss))
-                .addLast(new HeartBeatHandler(nss, ParamConfig.HB_DELAY))
+                .addLast(new HeartBeatHandler(nss, ParamConfig.KEEPALIVE_ENABLE, ParamConfig.KEEPALIVE_TIMEOUT))
                 .addLast(new PacketHandler(nss));
     }
 }
