@@ -80,6 +80,7 @@ public class NSessionSets {
             if(rms!=null
                     &&(rms.isClosed()
                     ||rms.channelCount()==0&&(curTime-rms.getCreateTimestamp()>CLEAN_DURATION))){
+                log.debug("remove empty or closed session, name:{}", k);
                 remoteSessions.sessions.remove(k,v);
             }
         });

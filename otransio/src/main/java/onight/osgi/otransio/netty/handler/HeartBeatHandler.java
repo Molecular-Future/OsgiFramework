@@ -16,7 +16,6 @@ public class HeartBeatHandler extends IdleStateHandler {
     private boolean enable;
 
     public HeartBeatHandler(NSessionSets nss, boolean enable, int idleTimeSeconds) {
-        //TODO 现在仅当端口在idleTimeSeconds秒内既没有读也没有写时才发送Heartbeat
         super(0, 0, idleTimeSeconds);
         this.enable = enable;
         this.nss = nss;
@@ -33,6 +32,7 @@ public class HeartBeatHandler extends IdleStateHandler {
             }
             else{
                 //如果enable为false，则在空闲时关闭连接
+                log.debug("channel idle timeout close.ch:{}",ctx.channel());
                 ctx.channel().close();
             }
         }
