@@ -151,12 +151,13 @@ public class NTransSender extends FutureSender {
             node = NodeInfo.fromURI(uri, destTo);
         }
 
-        PSession ms = null;
+        PSession ms;
         if(destTo==null){
-            log.warn("destTo is null,uri:{}, packId:{}, gcmd:{}{}",
-                    uri,
-                    pack.getExtStrProp(nss.getPackIDKey()),
-                    pack.getModule(), pack.getCMD());
+//            log.warn("destTo is null,uri:{}, packId:{}, gcmd:{}{}",
+//                    uri,
+//                    pack.getExtStrProp(nss.getPackIDKey()),
+//                    pack.getModule(), pack.getCMD());
+            ms = nss.getLocalSession(pack.getModule());
         }
         else{
             ms = nss.session(destTo, node);
