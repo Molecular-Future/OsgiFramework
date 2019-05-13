@@ -21,10 +21,9 @@ public class RemoteSessionManager extends PSessionManager<NodeInfo> {
             else{
                 //TODO merge session
                 //TODO 直接关闭新的连接是否正确？
-                session.closeSession(false);
+                ((RemoteNSession)v).mergeChannels(session);
                 return v;
             }
-
         });
     }
 

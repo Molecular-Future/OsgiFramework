@@ -113,6 +113,10 @@ public class NSessionSets {
         return (RemoteNSession)remoteSessions.get(key);
     }
     public void changeRemoteSessionName(String oldName, String newName){
+        /**
+         * TODO : 当前会一直连接类似dGNwOi8vcDAyOjM1MTAwP25ldGlkPXZyZg的地址，
+         *        造成连接过多，考虑修改change和drop的逻辑
+         */
         if(StringUtils.isBlank(oldName)
                 ||StringUtils.isBlank(newName)
                 ||StringUtils.equalsIgnoreCase(oldName, newName)){
@@ -128,14 +132,12 @@ public class NSessionSets {
         }
     }
 
-    public void dropSession(String nodeName, boolean sendDDNode){
-        synchronized(this) {
-            RemoteNSession rms = (RemoteNSession) remoteSessions.removeSession(nodeName);
-            if (rms != null) {
-                rms.closeSession(sendDDNode);
-            } else {
-                log.debug("drop unknown session: name={}", nodeName);
-            }
+    public void dropSession(String nodeName, boolean sendDDNode) {
+        RemoteNSession rms = (RemoteNSession) remoteSessions.removeSession(nodeName);
+        if (rms != null) {
+            rms.closeSession(sendDDNode);
+        } else {
+            log.debug("drop unknown session: name={}", nodeName);
         }
     }
 

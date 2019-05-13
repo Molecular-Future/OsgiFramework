@@ -212,6 +212,11 @@ public class RemoteNSession extends PSession {
         return this;
     }
 
+    public void mergeChannels(RemoteNSession session){
+        channels.addAll(session.channels);
+        session.channels.clear();
+    }
+
     public void parseUri(String uri){
         log.debug("parse uri: {}", uri);
         subNodes.clear();
