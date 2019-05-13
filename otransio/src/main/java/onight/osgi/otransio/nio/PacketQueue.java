@@ -136,17 +136,16 @@ public class PacketQueue implements Runnable {
 		if (isStop) {
 			return;
 		}
-		int cc = 0;
-		PropHelper props = new PropHelper(null);
-		while (ckpool.size() < ckpool.getCore() && !isStop
-				&& cc < props.get("org.zippo.otransio.reconnect.try.times", 10)) {
-			conn = ckpool.ensureConnection();
-			if (conn != null && conn.isOpen()) {
-				ckpool.addObject(conn);
-			} else {
-				cc++;
-			}
-		}
+//		int cc = 0;
+//		PropHelper props = new PropHelper(null);
+//		while (ckpool.size() < ckpool.getCore() && !isStop
+//				&& cc < props.get("org.zippo.otransio.reconnect.try.times", 10)) {
+//			conn = ckpool.ensureConnection();
+//			if (conn != null && conn.isOpen()) {
+//				ckpool.retobj(conn);
+//			}
+//			cc++;
+//		}
 		for (int i = 0; i < ckpool.getCore() / 4 && !isStop; i++) {
 			conn = ckpool.borrow();
 			if (conn != null && conn.isOpen()) {
@@ -247,7 +246,7 @@ public class PacketQueue implements Runnable {
 							+ ",queuesize=" + queue.size() + ",queuename=" + queuename + ",@" + name + ",conn=" + conn);
 					conn = ckpool.ensureConnection();// try to create new one
 					if (conn != null && conn.isOpen()) {
-						if (pool.size() > ckpool.getCore() / 4) {
+						if (pool.size() >= ckpool.getCore() / 4) {
 							retPut_ckpool = ckpool;
 						}else {
 							retPut_ckpool.getAllObjs().put(conn, conn);
