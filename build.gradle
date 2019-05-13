@@ -44,7 +44,7 @@ subprojects {
 	
 	apply plugin: 'com.google.protobuf'
 	apply plugin: 'zippo'
-	apply plugin: 'maven-publish'
+	//apply plugin: 'maven-publish'
 
 
 	dependencies {
