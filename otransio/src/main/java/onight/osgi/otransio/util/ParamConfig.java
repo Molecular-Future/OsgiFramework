@@ -92,5 +92,5 @@ public class ParamConfig {
     /**
      * 清理空的session的时间间隔，单位：秒，默认：30分钟
      */
-    public static final int CLEAN_EMPTY_SESSION = params.get("ntrans.clean.empty.session", 180);
+    public static final int CLEAN_EMPTY_SESSION = params.get("ntrans.clean.empty.session", 1800);
 }

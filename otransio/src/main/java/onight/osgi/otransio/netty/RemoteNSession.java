@@ -112,6 +112,10 @@ public class RemoteNSession extends PSession {
                             ch.writeAndFlush(Packets.newLogin(nss.getSelf()));
                             channels.add(f.channel());
                             eeg.submit(() -> flushWriteQ(f.channel()));
+                            //重置重试次数
+                            if(reConnectHasLimit){
+                                reConnectCount.set(ParamConfig.RECONNECT_COUNT);
+                            }
                         } else {
                             log.debug("connecting to {}:{} failed: {}", nodeInfo.getAddr(), nodeInfo.getPort(), f.cause());
                         }
