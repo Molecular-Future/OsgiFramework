@@ -34,13 +34,13 @@ public class NTransSender extends FutureSender {
             log.debug("send sync response ,packId:{}", pack.getExtStrProp(nss.getPackIDKey()));
         } catch (TimeoutException e) {
             pack = PacketHelper.toPBErrorReturn(framePacket, "-101", e.getMessage());
-            log.warn("package send timeout::", e);
+            log.warn("package["+framePacket.getExtStrProp(nss.getPackIDKey())+"] send timeout::", e);
         } catch (ExecutionException e) {
             pack = PacketHelper.toPBErrorReturn(framePacket, "-102", e.getMessage());
-            log.warn("package send execution error::", e);
+            log.warn("package["+framePacket.getExtStrProp(nss.getPackIDKey())+"] send execution error::", e);
         } catch (InterruptedException e) {
             pack = PacketHelper.toPBErrorReturn(framePacket, "-103", e.getMessage());
-            log.warn("package send interrupted error::", e);
+            log.warn("package["+framePacket.getExtStrProp(nss.getPackIDKey())+"] send interrupted error::", e);
             Thread.currentThread().interrupt();
         }
         return pack;
