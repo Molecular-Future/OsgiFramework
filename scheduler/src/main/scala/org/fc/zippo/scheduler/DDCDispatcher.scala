@@ -18,7 +18,7 @@ case class DDCDispatcher(name: String, q: LinkedBlockingDeque[Worker], threadPoo
     while (running.get) {
       try {
         if (System.currentTimeMillis() - lastlogTime > DDCConfig.LOGINFO_DISPATCHER_TIMESEC*1000) {
-          log.info("DDC-Dispatcher:" + name + ",tp[A=" + threadPool.getActiveThreadCount + ",Q=" + threadPool.getQueuedTaskCount + ",C=" + threadPool.getPoolSize
+          log.error("DDC-Dispatcher:" + name + ",tp[A=" + threadPool.getActiveThreadCount + ",Q=" + threadPool.getQueuedTaskCount + ",C=" + threadPool.getPoolSize
             + ",M=" + threadPool.getParallelism
             + ",S=" + threadPool.getStealCount + ",F=" + threadPool.getRunningThreadCount
             + "],defQ.size=" + q.size());
@@ -34,7 +34,7 @@ case class DDCDispatcher(name: String, q: LinkedBlockingDeque[Worker], threadPoo
       }
     }
 
-    log.info("DDC-Dispatcher [ Quit ]:" + name + ",tp[A=" + threadPool.getActiveThreadCount + ",Q=" + threadPool.getQueuedTaskCount + ",C=" + threadPool.getPoolSize
+    log.error("DDC-Dispatcher [ Quit ]:" + name + ",tp[A=" + threadPool.getActiveThreadCount + ",Q=" + threadPool.getQueuedTaskCount + ",C=" + threadPool.getPoolSize
       + ",M=" + threadPool.getParallelism
       + ",S=" + threadPool.getStealCount + ",F=" + threadPool.getRunningThreadCount
       + "],defQ.size=" + q.size());

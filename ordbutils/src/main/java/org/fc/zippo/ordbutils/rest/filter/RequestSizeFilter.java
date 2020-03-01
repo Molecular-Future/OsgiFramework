@@ -26,7 +26,7 @@ public class RequestSizeFilter extends SimplePacketFilter {
 	@Override
 	public void init(FilterConfig filterConfig) throws FilterException {
 		maxsize = -1;// 1M
-		String strsize = filterConfig.getStrProp("org.zippo.rest.req.maxsize", "1M");
+		String strsize = filterConfig.getStrProp("org.zippo.rest.req.maxsize", "1M").trim();
 		if (StringUtils.endsWithIgnoreCase(strsize, "M")) {
 			maxsize = Integer.parseInt(strsize.trim().substring(0, strsize.length() - 1)) * 1024 * 1024;
 		} else if (StringUtils.endsWithIgnoreCase(strsize, "K")) {

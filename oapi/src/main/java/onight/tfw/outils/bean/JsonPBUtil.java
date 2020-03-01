@@ -4,6 +4,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
+
 //import org.codehaus.jackson.JsonNode;
 //import org.codehaus.jackson.map.DeserializationConfig.Feature;
 //import org.codehaus.jackson.map.ObjectMapper;
@@ -15,8 +18,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
@@ -37,17 +40,15 @@ public class JsonPBUtil {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Object getValue(FieldDescriptor fd, JsonNode node,
-			Message.Builder builder) {
-		if (fd.isMapField() && fd.getJavaType().equals(JavaType.MESSAGE)
-				&& !node.isArray()) {
+	public static Object getValue(FieldDescriptor fd, JsonNode node, Message.Builder builder) {
+		if (fd.isMapField() && fd.getJavaType().equals(JavaType.MESSAGE) && !node.isArray()) {
 			json2PBMap(fd, node, builder);
 			return null;
 		}
 		if (fd.isRepeated() && (node.isArray() || node.isObject())) {
 			Iterator<JsonNode> it = node.elements();
 			Message.Builder subbuilder = null;
-			if (fd.getJavaType().equals(JavaType.STRING)&&node.isObject()) {
+			if (fd.getJavaType().equals(JavaType.STRING) && node.isObject()) {
 				if (!node.isTextual()) {
 					return node.toString();
 				} else
@@ -64,9 +65,19 @@ public class JsonPBUtil {
 					subbuilder = builder.newBuilderForField(fd);
 					json2PB(itnode, subbuilder);
 					v = subbuilder.build();
-				}
-				else
-				{
+				} else if (fd.getJavaType().equals(JavaType.BYTE_STRING) && !itnode.isArray()) {
+					String hex = itnode.asText();
+					if (hex.startsWith("0x")) {
+						hex = hex.substring(2);
+					}
+					if (hex.length() % 2 == 1) {
+						hex = "0" + hex;
+					}
+					try {
+						v = ByteString.copyFrom(Hex.decodeHex(hex));
+					} catch (DecoderException e) {
+					}
+				} else {
 					subbuilder = builder;
 					v = getValue(fd, itnode, subbuilder);
 				}
@@ -77,6 +88,20 @@ public class JsonPBUtil {
 				}
 			}
 			return null;
+		}
+		if (fd.getJavaType().equals(JavaType.BYTE_STRING) && node.isTextual()) {
+			try {
+				String hex = node.asText();
+				if (hex.startsWith("0x")) {
+					hex = hex.substring(2);
+				}
+				if (hex.length() % 2 == 1) {
+					hex = "0" + hex;
+				}
+				return ByteString.copyFrom(Hex.decodeHex(hex));
+			} catch (DecoderException e) {
+
+			}
 		}
 		if (fd.getJavaType().equals(JavaType.STRING)) {
 			if (!node.isTextual()) {
@@ -100,8 +125,7 @@ public class JsonPBUtil {
 			return node.asBoolean();
 		}
 		if (fd.getJavaType().equals(JavaType.ENUM)) {
-			EnumValueDescriptor evd = fd.getEnumType().findValueByNumber(
-					node.asInt());
+			EnumValueDescriptor evd = fd.getEnumType().findValueByNumber(node.asInt());
 			return evd;
 		}
 		if (fd.getJavaType().equals(JavaType.MESSAGE)) {
@@ -124,8 +148,7 @@ public class JsonPBUtil {
 			JsonNode tree = mapper.readTree(jsonTxt);
 			json2PB(tree, msgBuilder);
 		} catch (Exception e) {
-			log.warn("error in json2PB:jsonTxt=" + jsonTxt + ",builder="
-					+ msgBuilder, e);
+			log.warn("error in json2PB:jsonTxt=" + jsonTxt + ",builder=" + msgBuilder, e);
 		}
 	}
 
@@ -135,57 +158,57 @@ public class JsonPBUtil {
 			JsonNode tree = mapper.readTree(jsonbytes);
 			json2PB(tree, msgBuilder);
 		} catch (Exception e) {
-			log.warn("error in json2PB:jsonTxt=" + new String(jsonbytes)
-					+ ",builder=" + msgBuilder, e);
+			log.warn("error in json2PB:jsonTxt=" + new String(jsonbytes) + ",builder=" + msgBuilder, e);
 		}
 	}
+
 	public static void json2PBArrayB(byte[] jsonbytes, BuilderFactory factory) {
 		try {
 			JsonNode tree = mapper.readTree(jsonbytes);
 			json2PBArray(tree, factory);
 		} catch (Exception e) {
-			log.warn("error in json2PB:jsonTxt=" + new String(jsonbytes)
-					+ ",builders=" + factory, e);
+			log.warn("error in json2PB:jsonTxt=" + new String(jsonbytes) + ",builders=" + factory, e);
 		}
 	}
-	public static interface BuilderFactory{
+
+	public static interface BuilderFactory {
 		public Message.Builder getBuilder();
 	}
+
 	public static void json2PBArrayS(String jsontext, BuilderFactory factory) {
 		try {
 			JsonNode tree = mapper.readTree(jsontext);
 			json2PBArray(tree, factory);
 		} catch (Exception e) {
-			log.warn("error in json2PB:jsonTxt=" + jsontext
-					+ ",builders=" + factory, e);
+			log.warn("error in json2PB:jsonTxt=" + jsontext + ",builders=" + factory, e);
 		}
 	}
-	public static void json2PBMap(FieldDescriptor fd, JsonNode node,
-			Message.Builder msgBuilder) {
+
+	public static void json2PBMap(FieldDescriptor fd, JsonNode node, Message.Builder msgBuilder) {
 		Iterator<Map.Entry<String, JsonNode>> it = node.fields();
 		while (it.hasNext()) {
 			Map.Entry<String, JsonNode> item = it.next();
-			MapEntry.Builder mb = (MapEntry.Builder) msgBuilder
-					.newBuilderForField(fd);
+			MapEntry.Builder mb = (MapEntry.Builder) msgBuilder.newBuilderForField(fd);
 			FieldDescriptor fd2 = mb.getDescriptorForType().getFields().get(1);
 			mb.setKey(item.getKey().trim());
 			mb.setValue(getValue(fd2, item.getValue(), mb));
 			msgBuilder.addRepeatedField(fd, mb.build());
 		}
 	}
+
 	public static void json2PBArray(JsonNode tree, BuilderFactory factory) {
-		if(tree.isArray()){
+		if (tree.isArray()) {
 			Iterator<JsonNode> it = tree.elements();
 			while (it.hasNext()) {
 				JsonNode itnode = it.next();
-				json2PB(itnode,factory.getBuilder());
+				json2PB(itnode, factory.getBuilder());
 			}
 		}
 	}
+
 	public static void json2PB(JsonNode tree, Message.Builder msgBuilder) {
 		try {
-			List<FieldDescriptor> fds = msgBuilder.getDescriptorForType()
-					.getFields();
+			List<FieldDescriptor> fds = msgBuilder.getDescriptorForType().getFields();
 
 			for (FieldDescriptor fd : fds) {
 				JsonNode node = tree.get(fd.getName());

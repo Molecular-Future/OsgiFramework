@@ -9,6 +9,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.binary.Hex;
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.DescriptorProtos.FieldOptions.JSType;
 import com.google.protobuf.Descriptors;
@@ -183,7 +185,10 @@ public class JsonPBFormat extends JsonFormat {
 
 		case BYTES: {
 			generator.print("\"");
-			generator.print(escapeBytes((ByteString) value));
+//			generator.print(escapeBytes((ByteString) value));
+			String hex=Hex.encodeHexString(((ByteString) value).toByteArray());
+			generator.print(hex.replaceFirst("0", ""));
+			
 			generator.print("\"");
 			break;
 		}

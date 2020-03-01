@@ -1,22 +1,18 @@
 
-version='4.0.2'
+version='4.1.1'
 
 //group = 'onight.osgi'
 
-//buildscript {
-//	repositories { maven { url "http://172.18.80.253:8081/nexus/content/groups/public/" } }
-//
-//	dependencies {
-//		classpath "onight.osgi:zpp-gradle_1.8:3.3.0"
-//		if(project.name!='oapi_1.8'&&project.name!='oapi') {
-////			classpath ("org.fc.zippo:org.fc.zippo.oapi_1.8:4.0.0")
-//		}
-//		//classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
-//	}
-//}
-//
-//
-//apply plugin: 'zippo'
+buildscript {
+	repositories { maven { url "http://cwvi.club:8081/nexus/content/groups/cwv/" } }
+
+	dependencies {
+		classpath "onight.osgi:zpp-gradle_1.8:3.4.0"
+	}
+}
+
+
+apply plugin: 'zippo'
 
 
 dependencies {

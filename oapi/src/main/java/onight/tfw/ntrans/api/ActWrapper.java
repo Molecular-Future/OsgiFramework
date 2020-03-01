@@ -133,8 +133,10 @@ public class ActWrapper implements IActor, IJPAClient, IQClient, PSenderService,
 						}
 						;
 						retpack.getExtHead().buildFor(resp);
-
-						if (retpack.getFbody() != null & retpack.getFbody() instanceof Message) {
+						if (pack.getFixHead().getEnctype() == 'P' && retpack.getFbody() instanceof Message) {
+							Message msg = (Message) retpack.getFbody();
+							resp.getOutputStream().write(msg.toByteArray());
+						} else if (retpack.getFbody() != null && retpack.getFbody() instanceof Message) {
 							Message msg = (Message) retpack.getFbody();
 							String str = new JsonPBFormat().printToString(msg);
 							retpack.getFixHead().genBytes();
@@ -257,7 +259,7 @@ public class ActWrapper implements IActor, IJPAClient, IQClient, PSenderService,
 			handler.onFinished(PacketHelper.toPBErrorReturn(pack, ExceptionBody.EC_FILTER_EXCEPTION,
 					"FilterBlocked:" + e.getMessage()));
 		} catch (Throwable e) {
-//			e.printStackTrace();
+			// e.printStackTrace();
 			log.debug("doPacketWithFilterError:", e);
 			handler.onFinished(PacketHelper.toPBErrorReturn(pack, ExceptionBody.EC_SERVICE_EXCEPTION, e.getMessage()));
 		} finally {
