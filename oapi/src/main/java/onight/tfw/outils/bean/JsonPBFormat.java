@@ -187,7 +187,7 @@ public class JsonPBFormat extends JsonFormat {
 			generator.print("\"");
 //			generator.print(escapeBytes((ByteString) value));
 			String hex=Hex.encodeHexString(((ByteString) value).toByteArray());
-			generator.print(hex.replaceFirst("0", ""));
+			generator.print("0x"+hex);
 			
 			generator.print("\"");
 			break;
